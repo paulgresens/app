@@ -1,0 +1,29 @@
+name: app
+
+services:
+  backend:
+    build:
+      dockerfile: ./docker/backend/Dockerfile
+    ports:
+      - "8080:8080"
+    volumes:
+      - database:/database
+    depends_on:
+      - database
+    environment:
+      DB_HOST: database
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: password
+      DB_NAME: db
+  database:
+    build:
+      dockerfile: ./docker/database/Dockerfile
+    volumes:
+      - database:/database
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: db
+volumes:
+  database:

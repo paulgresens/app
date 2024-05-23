@@ -20,11 +20,11 @@ public class Similar {
     @NoArgsConstructor
     public static class SimilarPrimaryKey {
         @ManyToOne
-        @JoinColumn(name = "productNumber")
+        @JoinColumn(name = "product_number1")
         private Product productNumber1;
 
         @ManyToOne
-        @JoinColumn(name = "productNumber")
+        @JoinColumn(name = "product_nmber2")
         private Product productNumber2;
     }
 

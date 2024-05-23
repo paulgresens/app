@@ -20,9 +20,8 @@ public class Category {
 
     @Column
     private String name;
-
-    @Column(name = "super_category")
     @ManyToOne
+    @JoinColumn(name = "super_category")
     private Category superCategory;
 
     @ManyToMany
