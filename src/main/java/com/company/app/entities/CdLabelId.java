@@ -1,0 +1,36 @@
+package com.company.app.entities;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Embeddable;
+import lombok.Getter;
+import lombok.Setter;
+import org.hibernate.Hibernate;
+
+import java.util.Objects;
+
+@Getter
+@Setter
+@Embeddable
+public class CdLabelId implements java.io.Serializable {
+    private static final long serialVersionUID = -2480088865831536143L;
+    @Column(name = "product_number", nullable = false)
+    private String productNumber;
+
+    @Column(name = "name", nullable = false)
+    private String name;
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || Hibernate.getClass(this) != Hibernate.getClass(o)) return false;
+        CdLabelId entity = (CdLabelId) o;
+        return Objects.equals(this.name, entity.name) &&
+                Objects.equals(this.productNumber, entity.productNumber);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(name, productNumber);
+    }
+
+}

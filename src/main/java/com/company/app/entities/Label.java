@@ -1,6 +1,6 @@
-package com.company.app.databaseEntities;
+package com.company.app.entities;
 
-
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
@@ -9,13 +9,15 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-@Entity
-@Table(name = "person")
 @Getter
 @Setter
-@AllArgsConstructor
+@Entity
 @NoArgsConstructor
-public class Person {
+@AllArgsConstructor
+@Table(name = "label")
+public class Label {
     @Id
+    @Column(name = "name", nullable = false)
     private String name;
+
 }

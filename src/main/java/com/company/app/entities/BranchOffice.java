@@ -1,5 +1,4 @@
-package com.company.app.databaseEntities;
-
+package com.company.app.entities;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -10,22 +9,24 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-@Entity
-@Table(name = "branch_office")
 @Getter
 @Setter
-@AllArgsConstructor
+@Entity
 @NoArgsConstructor
+@AllArgsConstructor
+@Table(name = "branch_office")
 public class BranchOffice {
     @Id
+    @Column(name = "id", nullable = false)
     private Integer id;
 
-    @Column
+    @Column(name = "name", nullable = false)
     private String name;
 
-    @Column
+    @Column(name = "street", nullable = false)
     private String street;
 
-    @Column
+    @Column(name = "zip", nullable = false)
     private String zip;
+
 }
