@@ -19,9 +19,9 @@ public class Insert {
   public static void main(String[] args) {
     
     // Load XML files
-    File file1 = new File("dresden.xml");
-    File file2 = new File("leipzig_transformed.xml");
-    File file3 = new File("categories.xml");
+    File file1 = new File("data/dresden.xml");
+    File file2 = new File("data/leipzig_transformed.xml");
+    File file3 = new File("data/categories.xml");
     
     // Process each XML file
     processXMLFile(file1);

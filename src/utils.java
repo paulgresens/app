@@ -16,11 +16,14 @@ import org.w3c.dom.NodeList;
 
 public class utils {
 
-  //connection details 
+  //connection details
+  private static String dbHost = System.getenv("DB_HOST");
+  private static String dbPort = System.getenv("DB_PORT");
+  private static String dbName = System.getenv("DB_NAME");
+  private static String dbUser = System.getenv("DB_USER");
+  private static String dbPassword = System.getenv("DB_PASSWORD");
+  private static String url = String.format("jdbc:postgresql://%s:%s/%s", dbHost, dbPort, dbName);
   private static Connection connection;
-  private static final String url = "jdbc:mysql://localhost:3306/test_db";
-  private static final String user = "root";
-  private static final String password = "root";
 
   //path to log file
   private static final String logFilePath = "inconsistent_data_log.txt";
@@ -33,8 +36,8 @@ public class utils {
   public static Connection connect() throws SQLException {
       if (connection == null || connection.isClosed()) {
           try {
-              Class.forName("com.mysql.cj.jdbc.Driver");
-              connection = DriverManager.getConnection(url, user, password);
+              Class.forName("org.postgresql.Driver");
+              connection = DriverManager.getConnection(url, dbUser, dbPassword);
           } catch (ClassNotFoundException e) {
               logException(e);
           }
