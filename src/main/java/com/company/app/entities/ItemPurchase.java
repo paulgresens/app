@@ -20,7 +20,7 @@ public class ItemPurchase {
     private Integer id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    private Condition condition;
+    private ProdCondition prodCondition;
 
     @Column(name = "bought_at")
     private Instant boughtAt;

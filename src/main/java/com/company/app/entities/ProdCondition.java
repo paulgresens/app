@@ -11,10 +11,10 @@ import lombok.Setter;
 @Entity
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "condition")
-public class Condition {
+@Table(name = "prod_condition")
+public class ProdCondition {
     @EmbeddedId
-    private ConditionId id;
+    private ProdConditionId id;
 
     @MapsId("productNumber")
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

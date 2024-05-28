@@ -18,7 +18,7 @@ public class Dvd {
     private String productNumber;
 
     @MapsId
-    @OneToOne(fetch = FetchType.LAZY, optional = false, cascade = CascadeType.ALL)
+    @OneToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "product_number", nullable = false)
     private Product product;
 

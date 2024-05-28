@@ -2,7 +2,9 @@ package com.company.app.entities;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.Hibernate;
 
@@ -10,6 +12,8 @@ import java.util.Objects;
 
 @Getter
 @Setter
+@AllArgsConstructor
+@NoArgsConstructor
 @Embeddable
 public class RatingId implements java.io.Serializable {
     private static final long serialVersionUID = -6223682851273135539L;
@@ -22,7 +26,7 @@ public class RatingId implements java.io.Serializable {
     @Column(name = "branch_office_id", nullable = false)
     private Integer branchOfficeId;
 
-    @Column(name = "condition", nullable = false)
+    @Column(name = "product_condition", nullable = false)
     private String condition;
 
     @Override

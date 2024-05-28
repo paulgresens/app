@@ -23,8 +23,8 @@ public class Product {
     @Column(name = "title", nullable = false)
     private String title;
 
-    @Column(name = "times_sold", nullable = false)
-    private Integer timesSold;
+    @Column(name = "salesrank")
+    private Integer salesrank;
 
     @Column(name = "image")
     private String image;

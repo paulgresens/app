@@ -11,7 +11,7 @@ import lombok.Setter;
 @Entity
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "\"similar\"")
+@Table(name = "\"similarity\"")
 public class Similar {
     @EmbeddedId
     private SimilarId id;

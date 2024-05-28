@@ -26,10 +26,16 @@ public class PersonProduct {
     @JoinColumn(name = "product_number", nullable = false)
     private Product productNumber;
 
-/*
- TODO [Reverse Engineering] create field to map the 'role' column
- Available actions: Define target Java type | Uncomment as is | Remove column mapping
-    @Column(name = "role", columnDefinition = "role not null")
-    private Object role;
-*/
+
+    public enum Role {
+        author,
+        actor,
+        creator,
+        director,
+        artist
+    }
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "role", columnDefinition = "Role")
+    private Role role;
 }
