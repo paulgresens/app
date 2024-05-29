@@ -1,5 +1,9 @@
 package com.company.app;
 
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -9,10 +13,6 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.Map;
-
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
 
 
 public class Utils {
@@ -34,7 +34,7 @@ public class Utils {
     }
 
     //method to connect to db
-    public static void connect() throws SQLException {
+    public static Connection connect() throws SQLException {
         if (connection == null || connection.isClosed()) {
             try {
                 Class.forName("org.postgresql.Driver");
@@ -43,6 +43,7 @@ public class Utils {
                 logException(e);
             }
         }
+        return connection;
     }
 
     //method to close conn to db
@@ -114,6 +115,22 @@ public class Utils {
                 }
             }
         }
+        return null;
+    }
+
+    // helper method to retrieve text value of attribute from given tag name (ith occurence of attr in given el)
+    private static String getAttributeValueByList(NodeList list, String attribute, int index) {
+
+        if (list.getLength() > 0) {
+            Node node = list.item(index);
+            if (node != null && node.hasAttributes()) {
+                Node attr = node.getAttributes().getNamedItem(attribute);
+                if (attr != null) {
+                    return attr.getTextContent();
+                }
+            }
+        }
+
         return null;
     }
 
@@ -217,6 +234,7 @@ public class Utils {
     }
 
     public static void insertShop(Node node) {
+
         Element element = (Element) node;
 
         // retrieve rlevant data
@@ -238,297 +256,131 @@ public class Utils {
         }
     }
 
-    public static void insertProduct(Node node, String source) {
-        Element element = (Element) node;
+    public static void insertProduct(Node node) {
+        NodeList children = node.getChildNodes();
+        for (int i = 0; i < children.getLength(); i++) {
+            Node child = children.item(i);
+            if (child.getNodeType() == Node.ELEMENT_NODE) {
+                Element element = (Element) child;
+                // retireve relevant data
+                String productId = element.getAttribute("asin");
+                String picture = parseStringToNullable(element.getAttribute("picture"));
+                Integer salesrank = parseIntegerToNullable(element.getAttribute("salesrank"));
+                String title = getTagValue(element, "title");
 
-        // retireve relevant data
-        String productId = element.getAttribute("asin");
-        String picture = element.getAttribute("picture");
-        Integer salesrank = parseIntegerToNullable(element.getAttribute("salesrank"));
-        String title = getTagValue(element, "title");
+                // build sql statement with placeholders
+                String sql = "INSERT INTO product (product_number, title, salesrank, image) VALUES (?, ?, ?, ?);";
 
-        // build sql statement with placeholders
-        String sql = "INSERT INTO product (product_number, title, salesrank, image) VALUES (?, ?, ?, ?);";
-
-        // prepare statements set values for placeholders and excecute
-        // both salesrank and pictur can be null
-        try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setString(1, productId);
-            preparedStatement.setString(2, title);
-            if (salesrank != null) {
-                preparedStatement.setInt(3, salesrank);
-            } else {
-                preparedStatement.setNull(3, java.sql.Types.INTEGER);
-            }
-
-            if (picture != null) {
-                preparedStatement.setString(4, picture);
-            } else {
-                preparedStatement.setNull(4, java.sql.Types.VARCHAR);
-            }
-
-            preparedStatement.executeUpdate();
-
-        } catch (SQLException e) {
-            logException(e);
-        }
-
-        // inserting in all related tables
-        insertSimilars(element, productId, source);
-        insertSubProduct(element, productId, source);
-        insertConditions(element, productId);
-    }
-
-    private static void insertConditions(Element element, String productId) {
-
-        // get data for id retrieval
-        String branchOfficeName = element.getParentNode().getAttributes().getNamedItem("name").getTextContent();
-        String branchOfficeStreet = element.getParentNode().getAttributes().getNamedItem("street").getTextContent();
-        String branchOfficeZip = element.getParentNode().getAttributes().getNamedItem("zip").getTextContent();
-
-        // combine into Map
-        Map<String, String> params = Map.of("name", branchOfficeName, "street", branchOfficeStreet, "zip", branchOfficeZip);
-
-        //retrieve id for specific branch office
-        int branchOfficeId = getId("branch_office", params);
-
-        // get relevant data for condition insert
-        Integer price = parseIntegerToNullable(getTagValue(element, "price"));
-        String state = parseStringToNullable(getAttributeValue(element, "price", "state"));
-        String currency = parseStringToNullable(getAttributeValue(element, "price", "currency"));
-
-        // build sql Statement with placeholders for product_condition statement
-        String sql = "INSERT INTO prod_condition (product_number, branch_office_id, price, product_condition, currency) VALUES (?, ?, ?, ?,?);";
-
-        // build sql for count update
-        String updateSQL = "UPDATE prod_condition SET count = count + 1 WHERE product_number = ? and branch_office_id=? and product_condition=?;";
-
-        // prepare statements set values for placeholders and excecute
-        try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setString(1, productId);
-            preparedStatement.setInt(2, branchOfficeId);
-            if (price != null) {
-                preparedStatement.setInt(3, price);
-            } else {
-                preparedStatement.setNull(3, java.sql.Types.INTEGER);
-            }
-
-            preparedStatement.setString(4, state);
-
-            if (currency != null) {
-                preparedStatement.setString(5, currency);
-            }
-            preparedStatement.setNull(5, java.sql.Types.VARCHAR);
-
-            preparedStatement.executeUpdate();
-        } catch (SQLException e) {
-
-            // if duplicate then up the count
-            if (e.getErrorCode() == 23505) {
-                try (PreparedStatement updateStmt = connection.prepareStatement(updateSQL)) {
-                    updateStmt.setString(1, productId);
-                    updateStmt.setInt(2, branchOfficeId);
-                    updateStmt.setString(3, state);
-                    updateStmt.executeUpdate();
-
-                } catch (SQLException f) {
-                    f.printStackTrace();
-                }
-            } else {
-                logException(e);
-            }
-        }
-    }
-
-    private static void insertSimilars(Element element, String productId, String source) {
-        Element similarsElement = (Element) element.getElementsByTagName("similars").item(0);
-        // check if there is similars
-        if (similarsElement != null) {
-            // check data source to adjust data exctraction
-            // case leipzig
-            if (source.toLowerCase().equals("leipzig")) {
-                NodeList simList = similarsElement.getElementsByTagName("sim_product");
-                String sql = "INSERT INTO similarity (product_number_1, product_number_2) VALUES (?, ?);";
-
+                // prepare statements set values for placeholders and excecute
+                // both salesrank and pictur can be null
                 try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-                    for (int i = 0; i < simList.getLength(); i++) {
-                        Node simProductNode = simList.item(i);
-                        if (simProductNode.getNodeType() == Node.ELEMENT_NODE) {
-                            Element simProductElement = (Element) simProductNode;
-                            String sim = getTagValue(simProductElement, "asin");
-                            // avoid duplicates
-                            if (productId.compareTo(sim) > 0) {
-                                preparedStatement.setString(1, productId);
-                                preparedStatement.setString(2, sim);
-                            } else {
-                                preparedStatement.setString(1, sim);
-                                preparedStatement.setString(2, productId);
+                    preparedStatement.setString(1, productId);
+                    preparedStatement.setString(2, title);
+                    if (salesrank != null) {
+                        preparedStatement.setInt(3, salesrank);
+                    } else {
+                        preparedStatement.setNull(3, java.sql.Types.INTEGER);
+                    }
+
+                    if (picture != null) {
+                        preparedStatement.setString(4, picture);
+                    } else {
+                        preparedStatement.setNull(4, java.sql.Types.VARCHAR);
+                    }
+
+                    preparedStatement.executeUpdate();
+
+                } catch (SQLException e) {
+                    logException(e);
+                }
+            }
+        }
+
+    }
+
+
+    public static void insertCD(Node node) {
+        NodeList children = node.getChildNodes();
+
+        for (int i = 0; i < children.getLength(); i++) {
+            Node child = children.item(i);
+            if (child.getNodeType() == Node.ELEMENT_NODE) {
+                Element element = (Element) child;
+                String type = element.getAttribute("pgroup");
+
+                if (type.equals("Music")) {
+                    String productId = element.getAttribute("asin");
+                    Element musicSpec = (Element) element.getElementsByTagName("musicspec").item(0);
+                    String releaseDateString = getTagValue(musicSpec, "releasedate");
+                    java.sql.Timestamp releaseDate = convertToTimestamp(releaseDateString);
+                    String sql = "INSERT INTO cd (product_number, published_at) VALUES (?, ?);";
+                    Element person_Element = (Element) element.getElementsByTagName("artists").item(0);
+
+                    if (!(element.getElementsByTagName("artists").item(0).hasChildNodes() && getAttributeValue(person_Element, "artist", "name") == "")) {
+                        try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+                            preparedStatement.setString(1, productId);
+                            preparedStatement.setTimestamp(2, releaseDate);
+                            preparedStatement.executeUpdate();
+                        } catch (SQLException e) {
+                            logException(e);
+                        }
+
+                    }
+                }
+            }
+
+        }
+    }
+
+
+    public static void insertCDTitle(Node node) {
+        NodeList products = node.getChildNodes();
+        String cdTitleSql = "INSERT INTO cd_title (title, product_number) VALUES (?, ?);";
+        for (int i = 0; i < products.getLength(); i++) {
+            Node child = products.item(i);
+            if (child.getNodeType() == Node.ELEMENT_NODE) {
+                Element product = (Element) products.item(i);
+                String productId = product.getAttribute("asin");
+                Map<String, String> params = Map.of("product_number", productId);
+
+                if (checkEntries("cd", params)) {
+                    NodeList titleList = product.getElementsByTagName("title");
+
+                    for (int j = 0; j < titleList.getLength(); j++) {
+                        if (titleList.item(j).getParentNode().getNodeName().equals("tracks")) {
+                            String title = titleList.item(j).getTextContent();
+                            try (PreparedStatement cdTitleStatement = connection.prepareStatement(cdTitleSql)) {
+                                //insert in cd_title
+                                cdTitleStatement.setString(1, title);
+                                cdTitleStatement.setString(2, productId);
+                                cdTitleStatement.addBatch();
+                            } catch (SQLException e) {
+                                logException(e);
                             }
 
-                            preparedStatement.addBatch();
                         }
 
                     }
-                    preparedStatement.executeBatch();
-                } catch (SQLException e) {
-                    logException(e);
                 }
             }
-
-            // case Dresden
-            else if (source.toLowerCase().equals("dresden")) {
-                NodeList simList = similarsElement.getElementsByTagName("item");
-                String sql = "INSERT INTO similarity (product_number_1, product_number_2) VALUES (?, ?);";
-
-                try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-                    for (int i = 0; i < simList.getLength(); i++) {
-                        String sim = getAttributeValue(similarsElement, "item", "asin", i);
-                        // avoid duplicates
-                        if (productId.compareTo(sim) > 0) {
-                            preparedStatement.setString(1, productId);
-                            preparedStatement.setString(2, sim);
-                        } else {
-                            preparedStatement.setString(1, sim);
-                            preparedStatement.setString(2, productId);
-                        }
-                        preparedStatement.executeUpdate();
-                        connection.commit();
-                    }
-                    //preparedStatement.executeBatch();
-                } catch (SQLException e) {
-                    logException(e);
-                }
-            }
-            // throw exception if source doesnt exist
-            else {
-                throw new IllegalArgumentException("Invalid source: " + source);
-            }
         }
     }
 
-    private static void insertSubProduct(Element element, String productId, String source) {
-        // extract type of subProduct
-        String type = element.getAttribute("pgroup");
-        //adjust insert according to type
-        switch (type) {
-            case "Music":
-                insertCD(element, productId, source);
-                break;
-            case "Book":
-                insertBook(element, productId, source);
-                break;
-            case "DVD":
-                insertDVD(element, productId, source);
-                break;
-        }
-    }
+    public static void insertTitle(Node node) {
 
-    private static void insertCD(Element element, String productId, String source) {
+        Element element = (Element) node;
+        NodeList title_list = element.getElementsByTagName("title");
+        for (int i = 0; i < title_list.getLength(); i++) {
+            Node parent = title_list.item(i).getParentNode();
+            if (parent.getNodeName().equals("tracks")) {
+                Element connectedProd = (Element) title_list.item(i).getParentNode().getParentNode();
+                String connectedProdId = connectedProd.getAttribute("asin");
+                Map<String, String> params = Map.of("product_number", connectedProdId);
+                String titleSql = "INSERT INTO title (title) VALUES (?)";
 
-        // get relevant data and prepare sql statement with placeholders
-        Element musicSpec = (Element) element.getElementsByTagName("musicspec").item(0);
-        String releaseDateString = getTagValue(musicSpec, "releasedate");
-        java.sql.Timestamp releaseDate= convertToTimestamp(releaseDateString);
-        String sql = "INSERT INTO cd (product_number, published_at) VALUES (?, ?);";
-        Element person_Element = (Element) element.getElementsByTagName("artists").item(0);
+                if (checkEntries("cd", params)) {
+                    String title = title_list.item(i).getTextContent();
 
-        //if there is no artists then no insert
-        if (!(element.getElementsByTagName("artists").item(0).hasChildNodes() && getAttributeValue(person_Element, "artist", "name") == "")) {
-            try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-                preparedStatement.setString(1, productId);
-                preparedStatement.setTimestamp(2, releaseDate);
-                preparedStatement.executeUpdate();
-            } catch (SQLException e) {
-                logException(e);
-            }
-
-            // Insert into related tables
-            insertTitles(element, productId);
-            insertLabels(element, productId, source);
-            insertPeople(element, productId, "artist", source);
-        }
-    }
-
-    private static void insertBook(Element element, String productId, String source) {
-
-        //get relevant data
-        Element bookSpec = (Element) element.getElementsByTagName("bookspec").item(0);
-        String isbn = getAttributeValue(bookSpec, "isbn", "val");
-        Integer pages = parseIntegerToNullable(getTagValue(bookSpec, "pages"));
-        String publishedAtString = getAttributeValue(bookSpec, "publication", "date");
-        java.sql.Timestamp publishedAt= convertToTimestamp(publishedAtString);
-
-        // prepare sql statement with placeholders
-        String sql = "INSERT INTO book (product_number, number_pages, isbn, published_at) VALUES (?, ?, ?, ?);";
-
-        // prepare statement
-        try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setString(1, productId);
-            if (pages != null) {
-                preparedStatement.setInt(2, pages);
-            }
-            else{
-                preparedStatement.setNull(2,java.sql.Types.INTEGER);
-            }
-            preparedStatement.setString(3, isbn);
-            preparedStatement.setTimestamp(4, publishedAt);
-            preparedStatement.executeUpdate();
-        } catch (SQLException e) {
-            logException(e);
-        }
-
-        // Insert into related tables
-        insertPublisher(element, productId, source);
-        insertPeople(element, productId, "author", source);
-    }
-
-    private static void insertDVD(Element element, String productId, String source) {
-
-        // get relevant data
-        Element dvdSpec = (Element) element.getElementsByTagName("dvdspec").item(0);
-        String format = getTagValue(dvdSpec, "format");
-        String runningTime = getTagValue(dvdSpec, "runningtime");
-        String regionCode = getTagValue(dvdSpec, "regioncode");
-
-        //prepare sql statement with placeholders
-        String sql = "INSERT INTO dvd (product_number, format, runtime, region_code) VALUES (?, ?, ?, ?);";
-
-        //prepare statement, set placeholders, excecute
-        try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setString(1, productId);
-            preparedStatement.setString(2, format);
-            preparedStatement.setString(3, runningTime);
-            preparedStatement.setString(4, regionCode);
-
-            preparedStatement.executeUpdate();
-        } catch (SQLException e) {
-            logException(e);
-        }
-
-        // insert into related tables
-        insertPeople(element, productId, "creator", source);
-        insertPeople(element, productId, "director", source);
-        insertPeople(element, productId, "actor", source);
-    }
-
-    public static void insertTitles(Element element, String productId) {
-
-        // get track element which has child elements with individual tracks
-        Element tracksElement = (Element) element.getElementsByTagName("tracks").item(0);
-        if (tracksElement != null) {
-
-            // set list of nodes with individual tracks and prepare sql for table inserts
-            NodeList trackList = tracksElement.getElementsByTagName("title");
-            String titleSql = "INSERT INTO title (title) VALUES (?)";
-            String cdTitleSql = "INSERT INTO cd_title (title, product_number) VALUES (?, ?);";
-
-            try (PreparedStatement cdTitleStatement = connection.prepareStatement(cdTitleSql)) {
-
-                // loop through tracks
-                for (int i = 0; i < trackList.getLength(); i++) {
-                    String title = trackList.item(i).getTextContent();
-
-                    // insert title
                     try (PreparedStatement titleStatement = connection.prepareStatement(titleSql)) {
                         titleStatement.setString(1, title);
                         titleStatement.executeUpdate();
@@ -536,137 +388,264 @@ public class Utils {
                         logException(e);
                     }
 
-                    //insert in cd_title
-                    cdTitleStatement.setString(1, title);
-                    cdTitleStatement.setString(2, productId);
-                    cdTitleStatement.addBatch();
                 }
-
-                cdTitleStatement.executeBatch();
-            } catch (SQLException e) {
-                logException(e);
             }
+
+
         }
+
     }
 
-    public static void insertLabels(Element element, String productId, String source) {
+    public static void insertLabels(Node node, String source) {
+        Element element = (Element) node;
+        NodeList labelList = element.getElementsByTagName("label");
+        for (int i = 0; i < labelList.getLength(); i++) {
 
-        // get lables element
-        Element labelsElement = (Element) element.getElementsByTagName("labels").item(0);
+            Element connectedProd = (Element) labelList.item(i).getParentNode().getParentNode();
+            String connectedProdId = connectedProd.getAttribute("asin");
+            Map<String, String> params = Map.of("product_number", connectedProdId);
+            String labelSql = "INSERT INTO label (name) VALUES (?)";
 
-        if (labelsElement != null) {
-            NodeList labelList = labelsElement.getElementsByTagName("label");
-            String labelsSql = "INSERT INTO label (name) VALUES (?)";
-            String cdLabelSql = "INSERT INTO cd_label (name, product_number) VALUES (?, ?);";
+            if (checkEntries("cd", params)) {
 
-            // loop through labellist
-            for (int i = 0; i < labelList.getLength(); i++) {
-                // adjust data ectraction according to source
                 String label = null;
+
                 if (source.toLowerCase().equals("leipzig")) {
-                    label = getAttributeValue(labelsElement, "label", "name", i);
+                    label = getAttributeValueByList(labelList, "name", i);
                 } else if (source.toLowerCase().equals("dresden")) {
                     label = labelList.item(i).getTextContent();
                 }
 
                 if (label != null) {
 
-                    // insert label
-                    try (PreparedStatement labelStatement = connection.prepareStatement(labelsSql)) {
+                    try (PreparedStatement labelStatement = connection.prepareStatement(labelSql)) {
                         labelStatement.setString(1, label);
                         labelStatement.executeUpdate();
                     } catch (SQLException e) {
                         logException(e);
                     }
-
-                    //insert cd_label
-                    try (PreparedStatement cdLabelStatement = connection.prepareStatement(cdLabelSql)) {
-                        cdLabelStatement.setString(1, label);
-                        cdLabelStatement.setString(2, productId);
-                        cdLabelStatement.executeUpdate();
-                    } catch (SQLException e) {
-                        logException(e);
-                    }
-                } else {
-                    throw new IllegalArgumentException("Invalid source: " + source);
                 }
 
+            }
+
+        }
+
+    }
+
+    public static void insertCdLabels(Node node, String source) {
+        NodeList products = node.getChildNodes();
+        String cdLabelSql = "INSERT INTO cd_label (name, product_number) VALUES (?, ?);";
+        for (int i = 0; i < products.getLength(); i++) {
+            Node child = products.item(i);
+            if (child.getNodeType() == Node.ELEMENT_NODE) {
+                Element product = (Element) child;
+                String productId = product.getAttribute("asin");
+                Map<String, String> params = Map.of("product_number", productId);
+
+                if (checkEntries("cd", params)) {
+
+                    NodeList labelList = product.getElementsByTagName("label");
+
+                    for (int j = 0; j < labelList.getLength(); j++) {
+
+                        String label = null;
+
+                        if (source.toLowerCase().equals("leipzig")) {
+                            label = getAttributeValueByList(labelList, "name", j);
+                        } else if (source.toLowerCase().equals("dresden")) {
+                            label = labelList.item(j).getTextContent();
+                        }
+
+                        if (label != null) {
+                            try (PreparedStatement cdLabelStatement = connection.prepareStatement(cdLabelSql)) {
+                                cdLabelStatement.setString(1, label);
+                                cdLabelStatement.setString(2, productId);
+                                cdLabelStatement.executeUpdate();
+                            } catch (SQLException e) {
+                                logException(e);
+                            }
+                        }
+
+
+                    }
+                }
             }
         }
     }
 
-    public static void insertPublisher(Element element, String productId, String source) {
-        // get publisher Element
-        Element publisherElement = (Element) element.getElementsByTagName("publishers").item(0);
-        if (publisherElement != null) {
 
-            // prepare sql statements
-            NodeList publisherList = publisherElement.getElementsByTagName("publisher");
+    public static void insertBook(Node node) {
+        NodeList products = node.getChildNodes();
+
+        for (int i = 0; i < products.getLength(); i++) {
+            Node child = products.item(i);
+            if (child.getNodeType() == Node.ELEMENT_NODE) {
+                Element element = (Element) child;
+                String type = element.getAttribute("pgroup");
+
+                if (type.equals("Book")) {
+                    String productId = element.getAttribute("asin");
+                    Element bookSpec = (Element) element.getElementsByTagName("bookspec").item(0);
+                    String isbn = getAttributeValue(bookSpec, "isbn", "val");
+                    Integer pages = parseIntegerToNullable(getTagValue(bookSpec, "pages"));
+                    String publishedAtString = getAttributeValue(bookSpec, "publication", "date");
+                    java.sql.Timestamp publishedAt = convertToTimestamp(publishedAtString);
+
+                    String sql = "INSERT INTO book (product_number, number_pages, isbn, published_at) VALUES (?, ?, ?, ?);";
+                    Element person_Element = (Element) element.getElementsByTagName("author").item(0);
+
+                    if (!(element.getElementsByTagName("authors").item(0).hasChildNodes() && getAttributeValue(person_Element, "author", "name") == "")) {
+                        try (PreparedStatement bookStatement = connection.prepareStatement(sql)) {
+                            bookStatement.setString(1, productId);
+                            if (pages != null) {
+                                bookStatement.setInt(2, pages);
+                            } else {
+                                bookStatement.setNull(2, java.sql.Types.INTEGER);
+                            }
+                            bookStatement.setString(3, isbn);
+                            bookStatement.setTimestamp(4, publishedAt);
+                            bookStatement.executeUpdate();
+                        } catch (SQLException e) {
+                            logException(e);
+                        }
+
+                    }
+                }
+            }
+        }
+    }
+
+    public static void insertBookPublisher(Node node, String source) {
+        NodeList products = node.getChildNodes();
+        String bookPublisherSql = "INSERT INTO book_publisher (name, product_number) VALUES (?, ?);";
+        for (int i = 0; i < products.getLength(); i++) {
+            Node child = products.item(i);
+            if (child.getNodeType() == Node.ELEMENT_NODE) {
+                Element product = (Element) child;
+                String productId = product.getAttribute("asin");
+                Map<String, String> params = Map.of("product_number", productId);
+
+                if (checkEntries("book", params)) {
+                    NodeList publisherList = product.getElementsByTagName("publisher");
+
+
+                    for (int j = 0; j < publisherList.getLength(); j++) {
+                        String publisher = null;
+
+                        if (source.toLowerCase().equals("leipzig")) {
+                            publisher = getAttributeValueByList(publisherList, "name", j);
+                        } else if (source.toLowerCase().equals("dresden")) {
+                            publisher = publisherList.item(j).getTextContent();
+                        }
+
+                        if (publisher != null) {
+
+                            try (PreparedStatement bookPubisherStatement = connection.prepareStatement(bookPublisherSql)) {
+                                bookPubisherStatement.setString(1, publisher);
+                                bookPubisherStatement.setString(2, productId);
+                                bookPubisherStatement.executeUpdate();
+                            } catch (SQLException e) {
+                                logException(e);
+                            }
+                        }
+
+                    }
+                }
+            }
+        }
+    }
+
+    public static void insertPublisher(Node node, String source) {
+        Element element = (Element) node;
+        NodeList publisherList = element.getElementsByTagName("publisher");
+        for (int i = 0; i < publisherList.getLength(); i++) {
+
+            Element connectedProd = (Element) publisherList.item(i).getParentNode().getParentNode();
+            String connectedProdId = connectedProd.getAttribute("asin");
+            Map<String, String> params = Map.of("product_number", connectedProdId);
             String publisherSql = "INSERT INTO publisher (name) VALUES (?)";
-            String bookPublisherSql = "INSERT INTO book_publisher (name, product_number) VALUES (?, ?);";
 
-            // loop through publlisher list
-            for (int i = 0; i < publisherList.getLength(); i++) {
+            if (checkEntries("book", params)) {
 
-                // adjust ectraction according to data source
                 String publisher = null;
+
                 if (source.toLowerCase().equals("leipzig")) {
-                    publisher = getAttributeValue(publisherElement, "publisher", "name", i);
+                    publisher = getAttributeValueByList(publisherList, "name", i);
                 } else if (source.toLowerCase().equals("dresden")) {
                     publisher = publisherList.item(i).getTextContent();
                 }
 
                 if (publisher != null) {
 
-                    // insert publisher
-                    try (PreparedStatement publisherStatement = connection.prepareStatement(publisherSql)) {
-                        publisherStatement.setString(1, publisher);
-                        publisherStatement.executeUpdate();
+                    try (PreparedStatement labelStatement = connection.prepareStatement(publisherSql)) {
+                        labelStatement.setString(1, publisher);
+                        labelStatement.executeUpdate();
+                    } catch (SQLException e) {
+                        logException(e);
+                    }
+                }
+
+            }
+
+        }
+
+    }
+
+    public static void insertDvd(Node node) {
+        NodeList products = node.getChildNodes();
+
+        for (int i = 0; i < products.getLength(); i++) {
+            Node product = products.item(i);
+            if (product.getNodeType() == Node.ELEMENT_NODE) {
+                Element productElement = (Element) product;
+                String type = productElement.getAttribute("pgroup");
+
+                if (type.equals("DVD")) {
+                    String productId = productElement.getAttribute("asin");
+                    Element dvdSpec = (Element) productElement.getElementsByTagName("dvdspec").item(0);
+                    String format = getTagValue(dvdSpec, "format");
+                    String runningTime = getTagValue(dvdSpec, "runningtime");
+                    String regionCode = getTagValue(dvdSpec, "regioncode");
+
+                    String sql = "INSERT INTO dvd (product_number, format, runtime, region_code) VALUES (?, ?, ?, ?);";
+
+                    try (PreparedStatement dvdStatement = connection.prepareStatement(sql)) {
+
+                        dvdStatement.setString(1, productId);
+                        dvdStatement.setString(2, format);
+                        dvdStatement.setString(3, runningTime);
+                        dvdStatement.setString(4, regionCode);
+                        dvdStatement.executeUpdate();
                     } catch (SQLException e) {
                         logException(e);
                     }
 
-                    // insert book_publisher
-                    try (PreparedStatement bookPubisherStatement = connection.prepareStatement(bookPublisherSql)) {
-                        bookPubisherStatement.setString(1, publisher);
-                        bookPubisherStatement.setString(2, productId);
-                        bookPubisherStatement.executeUpdate();
-                    } catch (SQLException e) {
-                        logException(e);
-                    }
-                } else {
-                    throw new IllegalArgumentException("Invalid source: " + source);
+
                 }
             }
+
         }
     }
 
-    public static void insertPeople(Element element, String productId, String role, String source) {
-
-  /*
-  node structure for people in in both xmlss look like this:
-    <actors>
-      <actor>
-      <actor>
-      ...
-    <actors/>
-  */
-
+    public static void insertPerson(Node node, String productType, String role, String source) {
+        Element element = (Element) node;
         String parent = role + "s";
-        String child = role;
 
-        Element personsElement = (Element) element.getElementsByTagName(parent).item(0);
-        if (personsElement != null) {
-            NodeList personList = personsElement.getElementsByTagName(child);
+        NodeList personList = element.getElementsByTagName(role);
+        for (int i = 0; i < personList.getLength(); i++) {
+
+            Element connectedProd = (Element) personList.item(i).getParentNode().getParentNode();
+            String connectedProdId = connectedProd.getAttribute("asin");
+            Map<String, String> params = Map.of("product_number", connectedProdId);
             String personSql = "INSERT INTO person (name) VALUES (?)";
-            String productPersonSql = "INSERT INTO person_product (name, product_number, role) VALUES (?,?,?);";
 
-            for (int i = 0; i < personList.getLength(); i++) {
-
+            if (checkEntries(productType, params)) {
+                Element personElement = (Element) element.getElementsByTagName(parent).item(0);
                 // adjust extraction according to source
                 String person = null;
+
                 if (source.toLowerCase().equals("leipzig")) {
-                    person = getAttributeValue(personsElement, role, "name", i);
+                    person = getAttributeValue(personElement, role, "name", i);
                 } else if (source.toLowerCase().equals("dresden")) {
                     person = personList.item(i).getTextContent();
                 }
@@ -681,22 +660,210 @@ public class Utils {
                     } catch (SQLException e) {
                         logException(e);
                     }
+                }
+            }
 
-                    // insert into product_people
-                    try (PreparedStatement productPersonStatement = connection.prepareStatement(productPersonSql)) {
-                        productPersonStatement.setString(1, person);
-                        productPersonStatement.setString(2, productId);
-                        productPersonStatement.setString(3, role);
-                        productPersonStatement.executeUpdate();
-                    } catch (SQLException e) {
-                        logException(e);
+        }
+    }
+
+    public static void insertProductPerson(Node node, String productType, String role, String source) {
+        NodeList products = node.getChildNodes();
+        String parent = role + "s";
+        String productPersonSql = "INSERT INTO person_product (name, product_number, role) VALUES (?,?,?);";
+        for (int i = 0; i < products.getLength(); i++) {
+            Node product = products.item(i);
+            if (product.getNodeType() == Node.ELEMENT_NODE) {
+                Element productElement = (Element) product;
+                String productId = productElement.getAttribute("asin");
+                Map<String, String> params = Map.of("product_number", productId);
+
+                if (checkEntries(productType, params)) {
+                    Element personsElement = (Element) productElement.getElementsByTagName(parent).item(0);
+                    NodeList personList = productElement.getElementsByTagName(role);
+
+                    for (int j = 0; j < personList.getLength(); j++) {
+                        // adjust extraction according to source
+                        String person = null;
+                        if (source.toLowerCase().equals("leipzig")) {
+                            person = getAttributeValue(personsElement, role, "name", i);
+                        } else if (source.toLowerCase().equals("dresden")) {
+                            person = personList.item(i).getTextContent();
+                        }
+
+                        if (person != null) {
+                            try (PreparedStatement productPersonStatement = connection.prepareStatement(productPersonSql)) {
+                                productPersonStatement.setString(1, person);
+                                productPersonStatement.setString(2, productId);
+                                productPersonStatement.setString(3, role);
+                                productPersonStatement.executeUpdate();
+                            } catch (SQLException e) {
+                                logException(e);
+                            }
+                        } else {
+                            throw new IllegalArgumentException("Invalid source: " + source);
+                        }
+
                     }
-                } else {
-                    throw new IllegalArgumentException("Invalid source: " + source);
                 }
             }
         }
     }
+
+
+    public static void insertConditions(Node node) {
+
+        Element element = (Element) node;
+        // get data for id retrieval
+        String branchOfficeName = element.getAttributes().getNamedItem("name").getTextContent();
+        String branchOfficeStreet = element.getAttributes().getNamedItem("street").getTextContent();
+        String branchOfficeZip = element.getAttributes().getNamedItem("zip").getTextContent();
+
+        // combine into Map
+        Map<String, String> params = Map.of("name", branchOfficeName, "street", branchOfficeStreet, "zip", branchOfficeZip);
+
+        //retrieve id for specific branch office
+        int branchOfficeId = getId("branch_office", params);
+
+        NodeList products = node.getChildNodes();
+        String sql = "INSERT INTO prod_condition (product_number, branch_office_id, price, product_condition, currency) VALUES (?, ?, ?, ?,?);";
+
+        for (int i = 0; i < products.getLength(); i++) {
+            Node child = products.item(i);
+            if (child.getNodeType() == Node.ELEMENT_NODE) {
+
+                Element product = (Element) child;
+                String productId = product.getAttribute("asin");
+                Map<String, String> params_prod = Map.of("product_number", productId);
+
+                if (checkEntries("product", params_prod)) {
+
+                    // get relevant data for condition insert
+                    Integer price = parseIntegerToNullable(getTagValue(product, "price"));
+                    String state = parseStringToNullable(getAttributeValue(product, "price", "state"));
+                    String currency = parseStringToNullable(getAttributeValue(product, "price", "currency"));
+
+                    // build sql for count update
+                    String updateSQL = "UPDATE prod_condition SET count = count + 1 WHERE product_number = ? and branch_office_id=? and product_condition=?;";
+
+                    // prepare statements set values for placeholders and excecute
+                    try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+                        preparedStatement.setString(1, productId);
+                        preparedStatement.setInt(2, branchOfficeId);
+                        if (price != null) {
+                            preparedStatement.setInt(3, price);
+                        } else {
+                            preparedStatement.setNull(3, java.sql.Types.INTEGER);
+                        }
+
+                        preparedStatement.setString(4, state);
+
+                        if (currency != null) {
+                            preparedStatement.setString(5, currency);
+                        }
+                        preparedStatement.setNull(5, java.sql.Types.VARCHAR);
+
+                        preparedStatement.executeUpdate();
+                    } catch (SQLException e) {
+
+                        // if duplicate then up the count
+                        if (e.getErrorCode() == 23505) {
+                            try (PreparedStatement updateStmt = connection.prepareStatement(updateSQL)) {
+                                updateStmt.setString(1, productId);
+                                updateStmt.setInt(2, branchOfficeId);
+                                updateStmt.setString(3, state);
+                                updateStmt.executeUpdate();
+
+                            } catch (SQLException f) {
+                                f.printStackTrace();
+                            }
+                        } else {
+                            logException(e);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    public static void insertSimilars(Node node, String source) {
+
+        NodeList products = node.getChildNodes();
+
+        for (int i = 0; i < products.getLength(); i++) {
+            Node child = products.item(i);
+            if (child.getNodeType() == Node.ELEMENT_NODE) {
+                Element product = (Element) child;
+                String productId = product.getAttribute("asin");
+                Map<String, String> params_prod = Map.of("product_number", productId);
+
+                if (checkEntries("product", params_prod)) {
+                    Element similarsElement = (Element) product.getElementsByTagName("similars").item(0);
+                    if (similarsElement != null) {
+                        // check data source to adjust data exctraction
+                        // case leipzig
+                        if (source.toLowerCase().equals("leipzig")) {
+                            NodeList simList = similarsElement.getElementsByTagName("sim_product");
+                            String sql = "INSERT INTO similarity (product_number_1, product_number_2) VALUES (?, ?);";
+
+                            try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+                                for (int k = 0; k < simList.getLength(); k++) {
+                                    Node simProductNode = simList.item(k);
+                                    if (simProductNode.getNodeType() == Node.ELEMENT_NODE) {
+                                        Element simProductElement = (Element) simProductNode;
+                                        String sim = getTagValue(simProductElement, "asin");
+                                        // avoid duplicates
+                                        if (productId.compareTo(sim) > 0) {
+                                            preparedStatement.setString(1, productId);
+                                            preparedStatement.setString(2, sim);
+                                        } else {
+                                            preparedStatement.setString(1, sim);
+                                            preparedStatement.setString(2, productId);
+                                        }
+
+                                        preparedStatement.addBatch();
+                                    }
+
+                                }
+                                preparedStatement.executeBatch();
+                            } catch (SQLException e) {
+                                logException(e);
+                            }
+                        }
+
+                        // case Dresden
+                        else if (source.toLowerCase().equals("dresden")) {
+                            NodeList simList = similarsElement.getElementsByTagName("item");
+                            String sql = "INSERT INTO similarity (product_number_1, product_number_2) VALUES (?, ?);";
+
+                            try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+                                for (int j = 0; i < simList.getLength(); j++) {
+                                    String sim = getAttributeValue(similarsElement, "item", "asin", j);
+                                    // avoid duplicates
+                                    if (productId.compareTo(sim) > 0) {
+                                        preparedStatement.setString(1, productId);
+                                        preparedStatement.setString(2, sim);
+                                    } else {
+                                        preparedStatement.setString(1, sim);
+                                        preparedStatement.setString(2, productId);
+                                    }
+                                    preparedStatement.executeUpdate();
+                                    connection.commit();
+                                }
+                                //preparedStatement.executeBatch();
+                            } catch (SQLException e) {
+                                logException(e);
+                            }
+                        }
+                        // throw exception if source doesnt exist
+                        else {
+                            throw new IllegalArgumentException("Invalid source: " + source);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
 
     public static void insertCategory(Node cat, int supId) {
 
@@ -746,7 +913,7 @@ public class Utils {
 
     }
 
-    private static void insertProductCategory(int catId, String productNumber) {
+    public static void insertProductCategory(int catId, String productNumber) {
         String insertSql = "Insert into product_category (id, product_number) values(?,?)";
         try (PreparedStatement statement = connection.prepareStatement(insertSql)) {
             statement.setInt(1, catId);

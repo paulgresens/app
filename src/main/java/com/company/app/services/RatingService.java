@@ -82,12 +82,13 @@ public class RatingService {
         String ratingByForProduct = "By: " + data.get(4) + " For: " + data.get(0) + ":   ";
 
         //linked Customer
-        Customer existingCustomer = customerRepository.findByUsername(data.get(4));
+        String username = data.get(4);
+        Customer existingCustomer = customerRepository.findByUsername(username);
         Customer linkedCustomer;
-        if (existingCustomer == null) {
+        if (existingCustomer == null || username.equals("guest")) {
             Integer maxId = customerRepository.findEntityWithHighestId();
             int nextCustomerId = maxId != null ? maxId + 1 : 0;
-            linkedCustomer = new Customer(nextCustomerId + 1, "", "", data.get(4), "");
+            linkedCustomer = new Customer(nextCustomerId + 1, "", "", username + (username.equals("guest") ? nextCustomerId : ""), "");
             entityManager.persist(linkedCustomer);
         } else {
             linkedCustomer = existingCustomer;
@@ -130,7 +131,6 @@ public class RatingService {
             Rating.RatingOption chosenRating;
             try {
                 chosenRating = Rating.RatingOption.getByValue(Integer.parseInt(data.get(1)));
-
             } catch (Exception e) {
                 throw new Exception(ratingByForProduct + "Invalid Value for rating");
             }
