@@ -1,27 +1,30 @@
 package com.company.app;
 
-import java.sql.Connection;
-import java.io.File;
-import java.sql.SQLException;
-
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-
-
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
+import org.xml.sax.InputSource;
 
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.sql.Connection;
+import java.sql.SQLException;
 
 public class Insert {
 
-    public static void processXMLFile(File file) {
-        try {
+    public static void processXMLFile(File file, String encoding) {
+        try (InputStream inputStream = new FileInputStream(file);
+             InputStreamReader reader = new InputStreamReader(inputStream, encoding)) {
+
             // Parse XML file
             DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
             DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
-            Document doc = dBuilder.parse(file);
+            Document doc = dBuilder.parse(new InputSource(reader));
             doc.getDocumentElement().normalize();
             Node rootElement = doc.getDocumentElement();
 
@@ -59,19 +62,29 @@ public class Insert {
             Node rootElement = doc.getDocumentElement();
 
             Utils.insertShop(rootElement);
-            //connection.commit();
+            Utils.insertProduct(rootElement);
 
-            if (rootElement.hasChildNodes()) {
-                NodeList children = rootElement.getChildNodes();
-                for (int i = 0; i < children.getLength(); i++) {
-                    Node child = children.item(i);
-                    if (child.getNodeType() == Node.ELEMENT_NODE) {
-                        Utils.insertProduct(child, "leipzig");
-                    }
-                }
-            }
+            Utils.insertCD(rootElement);
+            Utils.insertBook(rootElement);
+            Utils.insertDvd(rootElement);
 
-            //connection.commit();
+            Utils.insertTitle(rootElement);
+            Utils.insertCDTitle(rootElement);
+            Utils.insertLabels(rootElement, "leipzig");
+            Utils.insertCdLabels(rootElement, "leipzig");
+            Utils.insertPublisher(rootElement, "leipzig");
+            Utils.insertBookPublisher(rootElement, "leipzig");
+
+            Utils.insertPerson(rootElement, "cd", "artist", "leipzig");
+            Utils.insertPerson(rootElement, "book", "author", "leipzig");
+            Utils.insertPerson(rootElement, "dvd", "creator", "leipzig");
+            Utils.insertPerson(rootElement, "dvd", "director", "leipzig");
+            Utils.insertPerson(rootElement, "dvd", "actor", "leipzig");
+
+            Utils.insertSimilars(rootElement, "leipzig");
+            Utils.insertConditions(rootElement);
+
+
         } catch (SQLException e) {
             e.printStackTrace();
             try {
@@ -92,21 +105,31 @@ public class Insert {
             Utils.connect();
             Connection connection = Utils.getConnection();
             connection.setAutoCommit(true);
+
             Node rootElement = doc.getDocumentElement();
 
             Utils.insertShop(rootElement);
-            //connection.commit();
+            Utils.insertProduct(rootElement);
 
-            if (rootElement.hasChildNodes()) {
-                NodeList children = rootElement.getChildNodes();
-                for (int i = 0; i < children.getLength(); i++) {
-                    Node child = children.item(i);
-                    if (child.getNodeType() == Node.ELEMENT_NODE) {
-                        Utils.insertProduct(child, "dresden");
-                        //connection.commit();
-                    }
-                }
-            }
+            Utils.insertCD(rootElement);
+            Utils.insertBook(rootElement);
+            Utils.insertDvd(rootElement);
+
+            Utils.insertTitle(rootElement);
+            Utils.insertCDTitle(rootElement);
+            Utils.insertLabels(rootElement, "dresden");
+            Utils.insertCdLabels(rootElement, "dresden");
+            Utils.insertPublisher(rootElement, "dresden");
+            Utils.insertBookPublisher(rootElement, "dresden");
+
+            Utils.insertPerson(rootElement, "cd", "artist", "dresden");
+            Utils.insertPerson(rootElement, "book", "author", "dresden");
+            Utils.insertPerson(rootElement, "dvd", "creator", "dresden");
+            Utils.insertPerson(rootElement, "dvd", "director", "dresden");
+            Utils.insertPerson(rootElement, "dvd", "actor", "dresden");
+
+            Utils.insertSimilars(rootElement, "dresden");
+            Utils.insertConditions(rootElement);
 
             //connection.commit();
         } catch (SQLException e) {
@@ -158,7 +181,6 @@ public class Insert {
         }
     }
 }
-  
 
 
 

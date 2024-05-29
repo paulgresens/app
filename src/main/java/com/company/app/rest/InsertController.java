@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.File;
+import java.nio.charset.StandardCharsets;
 
 @RestController
 public class InsertController {
@@ -20,9 +21,9 @@ public class InsertController {
         File file3 = new File("src/data/categories.xml");
 
 
-        Insert.processXMLFile(file1);
-        Insert.processXMLFile(file2);
-        Insert.processXMLFile(file3);
+        Insert.processXMLFile(file1, "ISO-8859-1");
+        Insert.processXMLFile(file2, StandardCharsets.UTF_8.name());
+        Insert.processXMLFile(file3, "ISO-8859-1");
 
         dataInserter.insertReviewData();
     }
