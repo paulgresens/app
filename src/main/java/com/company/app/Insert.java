@@ -56,8 +56,6 @@ public class Insert {
             Connection connection = Utils.getConnection();
             connection.setAutoCommit(true);
 
-            System.err.println(connection);
-            System.err.println("-----------------------------------------------------");
             Node rootElement = doc.getDocumentElement();
 
             Utils.insertShop(rootElement);

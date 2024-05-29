@@ -4,6 +4,10 @@ import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.sql.*;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.Map;
 
 import org.w3c.dom.Element;
@@ -30,7 +34,7 @@ public class Utils {
     }
 
     //method to connect to db
-    public static Connection connect() throws SQLException {
+    public static void connect() throws SQLException {
         if (connection == null || connection.isClosed()) {
             try {
                 Class.forName("org.postgresql.Driver");
@@ -39,7 +43,6 @@ public class Utils {
                 logException(e);
             }
         }
-        return connection;
     }
 
     //method to close conn to db
@@ -50,6 +53,22 @@ public class Utils {
             }
         } catch (SQLException e) {
             logException(e);
+        }
+    }
+
+    private static java.sql.Timestamp convertToTimestamp(String timestampString) {
+        if (timestampString == null || timestampString.isEmpty()) {
+            return null;
+        }
+
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        try {
+            LocalDate localDate = LocalDate.parse(timestampString, formatter);
+            LocalDateTime localDateTime = localDate.atStartOfDay();
+            return java.sql.Timestamp.valueOf(localDateTime);
+        } catch (DateTimeParseException e) {
+            System.err.println("Failed to parse timestamp: " + e.getMessage());
+            return null;
         }
     }
 
@@ -408,7 +427,8 @@ public class Utils {
 
         // get relevant data and prepare sql statement with placeholders
         Element musicSpec = (Element) element.getElementsByTagName("musicspec").item(0);
-        String releaseDate = getTagValue(musicSpec, "releasedate");
+        String releaseDateString = getTagValue(musicSpec, "releasedate");
+        java.sql.Timestamp releaseDate= convertToTimestamp(releaseDateString);
         String sql = "INSERT INTO cd (product_number, published_at) VALUES (?, ?);";
         Element person_Element = (Element) element.getElementsByTagName("artists").item(0);
 
@@ -416,7 +436,7 @@ public class Utils {
         if (!(element.getElementsByTagName("artists").item(0).hasChildNodes() && getAttributeValue(person_Element, "artist", "name") == "")) {
             try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
                 preparedStatement.setString(1, productId);
-                preparedStatement.setString(2, releaseDate);
+                preparedStatement.setTimestamp(2, releaseDate);
                 preparedStatement.executeUpdate();
             } catch (SQLException e) {
                 logException(e);
@@ -435,7 +455,8 @@ public class Utils {
         Element bookSpec = (Element) element.getElementsByTagName("bookspec").item(0);
         String isbn = getAttributeValue(bookSpec, "isbn", "val");
         Integer pages = parseIntegerToNullable(getTagValue(bookSpec, "pages"));
-        String publishedAt = getAttributeValue(bookSpec, "publication", "date");
+        String publishedAtString = getAttributeValue(bookSpec, "publication", "date");
+        java.sql.Timestamp publishedAt= convertToTimestamp(publishedAtString);
 
         // prepare sql statement with placeholders
         String sql = "INSERT INTO book (product_number, number_pages, isbn, published_at) VALUES (?, ?, ?, ?);";
@@ -446,8 +467,11 @@ public class Utils {
             if (pages != null) {
                 preparedStatement.setInt(2, pages);
             }
+            else{
+                preparedStatement.setNull(2,java.sql.Types.INTEGER);
+            }
             preparedStatement.setString(3, isbn);
-            preparedStatement.setString(4, publishedAt);
+            preparedStatement.setTimestamp(4, publishedAt);
             preparedStatement.executeUpdate();
         } catch (SQLException e) {
             logException(e);
@@ -618,15 +642,15 @@ public class Utils {
     }
 
     public static void insertPeople(Element element, String productId, String role, String source) {
-    
-    /*
-    node structure for people in in both xmlss look like this:
-      <actors>
-        <actor>
-        <actor>
-        ...
-      <actors/>
-    */
+
+  /*
+  node structure for people in in both xmlss look like this:
+    <actors>
+      <actor>
+      <actor>
+      ...
+    <actors/>
+  */
 
         String parent = role + "s";
         String child = role;
@@ -684,7 +708,7 @@ public class Utils {
             String category = cat.getFirstChild().getNodeValue().replace("\n", "").trim();
             statement.setString(1, category);
             if (supId == -1) {
-                statement.setNull(2, Types.INTEGER);
+                statement.setNull(2, java.sql.Types.INTEGER);
             } else {
                 statement.setInt(2, supId);
             }
