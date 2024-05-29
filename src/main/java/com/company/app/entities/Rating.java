@@ -5,11 +5,8 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.hibernate.annotations.Type;
 
 import java.time.Instant;
-import java.util.HashMap;
-import java.util.Map;
 
 @Getter
 @Setter
@@ -21,20 +18,23 @@ public class Rating {
     @EmbeddedId
     private RatingId id;
 
-    @MapsId("customer_id")
+    @MapsId("customerId")
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "customer_id", referencedColumnName = "customer_id", nullable = false)
     private Customer customer;
 
-    @MapsId
+    @MapsId("id")
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumns({
-            @JoinColumn(name = "product_condition"),
-            @JoinColumn(name = "branch_office_id"),
-            @JoinColumn(name = "product_number")
+            @JoinColumn(name = "product_condition", referencedColumnName = "product_condition"),
+            @JoinColumn(name = "branch_office_id", referencedColumnName = "branch_office_id"),
+            @JoinColumn(name = "product_number", referencedColumnName = "product_number")
     })
     private ProdCondition prodCondition;
 
+
+    @Column(name = "summary", length = Integer.MAX_VALUE)
+    private String summary;
     @Column(name = "description", length = Integer.MAX_VALUE)
     private String description;
     @Column(name = "rated_at", nullable = false)
@@ -66,7 +66,7 @@ public class Rating {
                     return option;
                 }
             }
-            throw new IllegalArgumentException("No enum constant with value " + value + " found");
+            throw new IllegalArgumentException("Rating option " + value + " is not possible");
         }
     }
 
