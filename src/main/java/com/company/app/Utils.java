@@ -687,7 +687,7 @@ public class Utils {
                         if (source.toLowerCase().equals("leipzig")) {
                             person = getAttributeValue(personsElement, role, "name", i);
                         } else if (source.toLowerCase().equals("dresden")) {
-                            person = personList.item(i).getTextContent();
+                            person = personList.item(j).getTextContent();
                         }
 
                         if (person != null) {

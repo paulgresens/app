@@ -75,14 +75,29 @@ public class Insert {
             Utils.insertPublisher(rootElement, "leipzig");
             Utils.insertBookPublisher(rootElement, "leipzig");
 
+            // insert all artists
             Utils.insertPerson(rootElement, "cd", "artist", "leipzig");
+            Utils.insertProductPerson(rootElement, "cd", "artist", "leipzig");
+
+            // insert all authors
             Utils.insertPerson(rootElement, "book", "author", "leipzig");
+            Utils.insertProductPerson(rootElement, "book", "author", "leipzig");
+
+            // insert all creators
             Utils.insertPerson(rootElement, "dvd", "creator", "leipzig");
+            Utils.insertProductPerson(rootElement, "dvd", "creator", "leipzig");
+
+            // insert all directors
             Utils.insertPerson(rootElement, "dvd", "director", "leipzig");
+            Utils.insertProductPerson(rootElement, "dvd", "director", "leipzig");
+
+            //insert all actors
             Utils.insertPerson(rootElement, "dvd", "actor", "leipzig");
+            Utils.insertProductPerson(rootElement, "dvd", "actor", "leipzig");
 
             Utils.insertSimilars(rootElement, "leipzig");
             Utils.insertConditions(rootElement);
+
 
 
         } catch (SQLException e) {
