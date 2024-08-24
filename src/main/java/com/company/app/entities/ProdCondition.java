@@ -35,4 +35,7 @@ public class ProdCondition {
     @Column(name = "currency")
     private String currency;
 
+    @Column(name = "avg_rating")
+    private Float avgRating;
+
 }

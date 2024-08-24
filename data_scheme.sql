@@ -229,3 +229,39 @@ ALTER TABLE "prod_condition"
 
 ALTER TABLE "prod_condition"
     ADD FOREIGN KEY ("branch_office_id") REFERENCES "branch_office" ("id");
+
+-- changes to db, related to assignment 2
+-- add new col avg rating
+ALTER TABLE prod_condition
+    ADD COLUMN avg_rating Float;
+
+-- def function to update avg rating
+CREATE OR REPLACE FUNCTION update_avg_rating()
+RETURNS TRIGGER AS $$
+DECLARE
+new_avg_rating FLOAT;
+BEGIN
+-- calculating new avg
+SELECT AVG(rating) INTO new_avg_rating
+FROM rating
+WHERE product_number = NEW.product_number
+  AND product_condition = NEW.product_condition
+  AND branch_office_id = NEW.branch_office_id;
+
+
+-- updating avg rating
+UPDATE prod_condition
+SET avg_rating = new_avg_rating
+WHERE product_number = NEW.product_number
+  AND product_condition = NEW.product_condition
+  AND branch_office_id = NEW.branch_office_id;
+
+RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- create trigger
+CREATE TRIGGER after_insert_rating
+    AFTER INSERT ON rating
+    FOR EACH ROW
+    EXECUTE FUNCTION update_avg_rating();

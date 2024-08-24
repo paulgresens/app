@@ -113,7 +113,7 @@ public class RatingService {
         //linked Condition
         ProdConditionId prodConditionId = new ProdConditionId(existingProduct.get().getProductNumber(), officeWhereBought.getId(), "unknown");
         Optional<ProdCondition> existingCondition = conditionRepository.findById(prodConditionId);
-        ProdCondition linkedProdCondition = existingCondition.isEmpty() ? new ProdCondition(new ProdConditionId(existingProduct.get().getProductNumber(), officeWhereBought.getId(), "unknown"), existingProduct.get(), officeWhereBought, null, 0, null) : existingCondition.get();
+        ProdCondition linkedProdCondition = existingCondition.isEmpty() ? new ProdCondition(new ProdConditionId(existingProduct.get().getProductNumber(), officeWhereBought.getId(), "unknown"), existingProduct.get(), officeWhereBought, null, 0, null, null) : existingCondition.get();
 
         if (existingCondition.isEmpty()) {
             entityManager.persist(linkedProdCondition);
