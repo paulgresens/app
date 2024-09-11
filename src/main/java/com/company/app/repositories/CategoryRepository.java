@@ -9,7 +9,7 @@ import java.util.List;
 
 @Repository
 public interface CategoryRepository extends JpaRepository<Category, Integer> {
-    @Query(value = """
+    /*@Query(value = """
             WITH RECURSIVE CategoryTree AS (
                 -- Select the root category based on the given name and ensure it's a root (super_category is null)
                 SELECT c.id, c.name, c.super_category
@@ -23,5 +23,5 @@ public interface CategoryRepository extends JpaRepository<Category, Integer> {
             )
             SELECT * FROM CategoryTree
             """, nativeQuery = true)
-    List<Category> findCategoryTreeByName(@Param("categoryName") String categoryName);
+    List<Category> findCategoryTreeByName(@Param("categoryName") String categoryName);*/
 }

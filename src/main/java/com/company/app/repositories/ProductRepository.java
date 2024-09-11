@@ -10,15 +10,22 @@ import java.util.List;
 @Repository
 public interface ProductRepository extends JpaRepository<Product, String> {
 
-    //Methode 1
+    /*//Methode 1
     @Query(value = "SELECT * FROM product WHERE product_number = :productNumber", nativeQuery = true)
     Product getProducts(@Param("productNumber") String productNumber);
+    */
 
     // Methode 2
-    @Query("SELECT p FROM Product p WHERE :pattern IS NULL OR p.title LIKE :pattern")
+    /*@Query(value = "SELECT p FROM Product p WHERE p.title LIKE :pattern", nativeQuery = true)
     List<Product> getProductsByPattern(@Param("pattern") String pattern);
+    */
 
-    // Methode 4
+    List<Product> findByTitleContaining(String title);
+
+    @Query("SELECT p FROM Product p")
+    List<Product> getAllProducts();
+
+    /*// Methode 4
     @Query(value = "WITH RECURSIVE CategoryPath AS (" +
             "  SELECT c.id, c.super_category_id, c.name, ARRAY[c.name] as path" +
             "  FROM Category c" +
@@ -42,6 +49,15 @@ public interface ProductRepository extends JpaRepository<Product, String> {
     @Query("SELECT p FROM Product p, ProdCondition pc, Rating r " +
             "Where p.productNumber=pc.productNumber and pc.id=r.prodCondition  " +
             "and r.prodCondition = (p.productNumber, :branchoffice, :condition) order by r.ratingOption DESC")
-    List<Product> findTopProducts(@Param("limit") int limit, @Param("branchoffice_id") int branchoffice_id, @Param("condition") String condition);
+    List<Product> findTopProducts(@Param("limit") int limit, @Param("branchoffice_id") int branchoffice_id, @Param("condition") String condition);*/
+
+
+    @Query(value = "SELECT * FROM product WHERE product_number IN" +
+            "(SELECT product_number_2 FROM similarity WHERE product_number_1 = :productNumber UNION " +
+             "SELECT product_number_1 FROM similarity WHERE product_number_2 = :productNumber);",
+            nativeQuery = true
+    )
+    List<Product> getSimilarCheaperProduct(@Param("productNumber") String productNumber);
+
 
 }
