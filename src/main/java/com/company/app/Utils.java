@@ -699,8 +699,6 @@ public class Utils {
                             } catch (SQLException e) {
                                 logException(e);
                             }
-                        } else {
-                            throw new IllegalArgumentException("Invalid source: " + source);
                         }
 
                     }
@@ -796,48 +794,20 @@ public class Utils {
                 String productId = product.getAttribute("asin");
                 Map<String, String> params_prod = Map.of("product_number", productId);
 
-                if (checkEntries("product", params_prod)) {
-                    Element similarsElement = (Element) product.getElementsByTagName("similars").item(0);
-                    if (similarsElement != null) {
-                        // check data source to adjust data exctraction
-                        // case leipzig
-                        if (source.toLowerCase().equals("leipzig")) {
-                            NodeList simList = similarsElement.getElementsByTagName("sim_product");
-                            String sql = "INSERT INTO similarity (product_number_1, product_number_2) VALUES (?, ?);";
+                Element similarsElement = (Element) product.getElementsByTagName("similars").item(0);
+                if (similarsElement != null) {
+                    // check data source to adjust data exctraction
+                    // case leipzig
+                    if (source.toLowerCase().equals("leipzig")) {
+                        NodeList simList = similarsElement.getElementsByTagName("sim_product");
+                        String sql = "INSERT INTO similarity (product_number_1, product_number_2) VALUES (?, ?);";
 
-                            try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-                                for (int k = 0; k < simList.getLength(); k++) {
-                                    Node simProductNode = simList.item(k);
-                                    if (simProductNode.getNodeType() == Node.ELEMENT_NODE) {
-                                        Element simProductElement = (Element) simProductNode;
-                                        String sim = getTagValue(simProductElement, "asin");
-                                        // avoid duplicates
-                                        if (productId.compareTo(sim) > 0) {
-                                            preparedStatement.setString(1, productId);
-                                            preparedStatement.setString(2, sim);
-                                        } else {
-                                            preparedStatement.setString(1, sim);
-                                            preparedStatement.setString(2, productId);
-                                        }
-
-                                        preparedStatement.addBatch();
-                                    }
-
-                                }
-                                preparedStatement.executeBatch();
-                            } catch (SQLException e) {
-                                logException(e);
-                            }
-                        }
-
-                        // case Dresden
-                        else if (source.toLowerCase().equals("dresden")) {
-                            NodeList simList = similarsElement.getElementsByTagName("item");
-                            String sql = "INSERT INTO similarity (product_number_1, product_number_2) VALUES (?, ?);";
-
-                            try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-                                for (int j = 0; i < simList.getLength(); j++) {
-                                    String sim = getAttributeValue(similarsElement, "item", "asin", j);
+                        try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+                            for (int k = 0; k < simList.getLength(); k++) {
+                                Node simProductNode = simList.item(k);
+                                if (simProductNode.getNodeType() == Node.ELEMENT_NODE) {
+                                    Element simProductElement = (Element) simProductNode;
+                                    String sim = getTagValue(simProductElement, "asin");
                                     // avoid duplicates
                                     if (productId.compareTo(sim) > 0) {
                                         preparedStatement.setString(1, productId);
@@ -846,20 +816,47 @@ public class Utils {
                                         preparedStatement.setString(1, sim);
                                         preparedStatement.setString(2, productId);
                                     }
-                                    preparedStatement.executeUpdate();
-                                    connection.commit();
+
+                                    preparedStatement.addBatch();
                                 }
-                                //preparedStatement.executeBatch();
-                            } catch (SQLException e) {
-                                logException(e);
+
                             }
-                        }
-                        // throw exception if source doesnt exist
-                        else {
-                            throw new IllegalArgumentException("Invalid source: " + source);
+                            preparedStatement.executeBatch();
+                        } catch (SQLException e) {
+                            logException(e);
                         }
                     }
+
+                    // case Dresden
+                    else if (source.toLowerCase().equals("dresden")) {
+                        NodeList simList = similarsElement.getElementsByTagName("item");
+                        String sql = "INSERT INTO similarity (product_number_1, product_number_2) VALUES (?, ?);";
+
+                        try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+                            for (int j = 0; j < simList.getLength(); j++) {
+                                String sim = getAttributeValue(similarsElement, "item", "asin", j);
+                                // avoid duplicates
+                                if (productId.compareTo(sim) > 0) {
+                                    preparedStatement.setString(1, productId);
+                                    preparedStatement.setString(2, sim);
+                                } else {
+                                    preparedStatement.setString(1, sim);
+                                    preparedStatement.setString(2, productId);
+                                }
+                                preparedStatement.executeUpdate();
+                                connection.commit();
+                            }
+                            //preparedStatement.executeBatch();
+                        } catch (SQLException e) {
+                            logException(e);
+                        }
+                    }
+                    // throw exception if source doesnt exist
+                    else {
+                        throw new IllegalArgumentException("Invalid source: " + source);
+                    }
                 }
+
             }
         }
     }
