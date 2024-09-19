@@ -1,8 +1,10 @@
 package com.company.app.rest;
 
+import com.company.app.DTOs.ProdConditionDTO;
 import com.company.app.entities.Customer;
 import com.company.app.DTOs.ProductRatingDTO;
 import com.company.app.entities.Product;
+import com.company.app.repositories.ConditionRepository;
 import com.company.app.repositories.CustomerRepository;
 import com.company.app.repositories.ProductRepository;
 import jakarta.servlet.http.HttpServletRequest;
@@ -27,6 +29,8 @@ public class QueryController {
     ProductRepository productRepository;
     @Autowired
     CustomerRepository customerRepository;
+    @Autowired
+    private ConditionRepository conditionRepository;
 
     @GetMapping("/{productNumber}/similarCheaper")
     public ResponseEntity<Map<String, List<String>>> getSimilarCheaperProduct(@PathVariable String productNumber){
@@ -54,6 +58,16 @@ public class QueryController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
         }
         return customerRepository.getCustomersWithBelowCertainAverageRating(minimumAverageRating);
+    }
+    @GetMapping("/{productNumber}/offers")
+    public ResponseEntity<Map<String, List<ProdConditionDTO>>> getProductOffers(@PathVariable String productNumber){
+        Optional<Product> product = productRepository.findById(productNumber);
+        if (product.isEmpty()){
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Product does not exist");
+        }
+        List<ProdConditionDTO> offers = conditionRepository.getOffers(productNumber);
+        Map<String, List<ProdConditionDTO>> response = Map.of("offers", offers);
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/product/{product_number}")
