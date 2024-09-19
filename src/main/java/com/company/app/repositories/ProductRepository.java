@@ -52,12 +52,19 @@ public interface ProductRepository extends JpaRepository<Product, String> {
     List<Product> findTopProducts(@Param("limit") int limit, @Param("branchoffice_id") int branchoffice_id, @Param("condition") String condition);*/
 
 
-    @Query(value = "SELECT * FROM product WHERE product_number IN" +
-            "(SELECT product_number_2 FROM similarity WHERE product_number_1 = :productNumber UNION " +
-             "SELECT product_number_1 FROM similarity WHERE product_number_2 = :productNumber);",
+    @Query(value = "WITH min_price AS (SELECT MIN (price) as lowest_price, product_number FROM prod_condition GROUP BY product_number)" +
+            "SELECT similar_products.product_number FROM min_price INNER JOIN ( SELECT product_number_2 AS product_number FROM similarity WHERE product_number_1 = :productNumber UNION SELECT product_number_1 AS product_number FROM similarity WHERE product_number_2 = :productNumber) AS similar_products ON min_price.product_number = similar_products.product_number " +
+            "WHERE lowest_price IS NOT NULL AND " +
+            "min_price.product_number <> :productNumber AND " +
+            "(SELECT lowest_price FROM min_price " +
+            "WHERE product_number = :productNumber) IS NOT NULL AND " +
+            "lowest_price < ( " +
+            "(SELECT lowest_price FROM min_price " +
+            "WHERE product_number = :productNumber) " +
+            ");",
             nativeQuery = true
     )
-    List<Product> getSimilarCheaperProduct(@Param("productNumber") String productNumber);
+    List<String> getSimilarCheaperProduct(@Param("productNumber") String productNumber);
 
 
 }
