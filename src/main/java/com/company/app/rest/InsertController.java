@@ -15,9 +15,11 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Optional;
@@ -44,29 +46,32 @@ public class InsertController {
     }
 
     public static class AddReviewRequestBody {
-        private Integer customerId;
-        private String productNumber;
-        private Integer branchOfficeId;
-        private String productCondition;
-        private Integer rating;
-        private String description;
-        private String summary;
+        public Integer customerId;
+        public String productNumber;
+        public Integer branchOfficeId;
+        public String productCondition;
+        public Integer rating;
+        public String description;
+        public String summary;
     }
     @PostMapping("/review")
     public ResponseEntity addNewReview(@RequestBody AddReviewRequestBody addReviewRequestBody ){
+
         Optional<Rating> rating = ratingRepository.findById(new RatingId(new ProdConditionId(addReviewRequestBody.productNumber, addReviewRequestBody.branchOfficeId, addReviewRequestBody.productCondition), addReviewRequestBody.customerId));
-
         if(rating.isPresent()){
-            return new ResponseEntity(HttpStatus.CONFLICT);
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Customer Already rated this");
         }
-
+        if (addReviewRequestBody.rating < 1 || addReviewRequestBody.rating > 5 ){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+        }
         try{
-            ratingRepository.addNewRating(addReviewRequestBody, Instant.now().toString(), 0);
+
+            ratingRepository.addNewRating(addReviewRequestBody.customerId, addReviewRequestBody.productNumber,addReviewRequestBody.branchOfficeId, addReviewRequestBody.productCondition, addReviewRequestBody.rating, addReviewRequestBody.description, addReviewRequestBody.summary, new Timestamp(System.currentTimeMillis()), 0);
             return new ResponseEntity(HttpStatus.CREATED);
         } catch(Exception e){
-            return  new ResponseEntity(HttpStatus.INTERNAL_SERVER_ERROR);
+
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
-
 }
 
