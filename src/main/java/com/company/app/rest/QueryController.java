@@ -1,6 +1,8 @@
 package com.company.app.rest;
 
+import com.company.app.entities.Customer;
 import com.company.app.entities.Product;
+import com.company.app.repositories.CustomerRepository;
 import com.company.app.repositories.ProductRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -16,6 +18,8 @@ import java.util.Optional;
 public class QueryController {
     @Autowired
     ProductRepository productRepository;
+    @Autowired
+    CustomerRepository customerRepository;
 
     @GetMapping("/{productNumber}/similarCheaper")
     public ResponseEntity<Map<String, List<String>>> getSimilarCheaperProduct(@PathVariable String productNumber){
@@ -35,7 +39,14 @@ public class QueryController {
         } else {
             return productRepository.findByTitleContaining(pattern);
         }
+    }
 
+    @GetMapping("/belowRating/{minimumAverageRating}")
+    public List<Customer> getTrolls(@PathVariable Float minimumAverageRating){
+        if (minimumAverageRating < 0 || minimumAverageRating > 5){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+        }
+        return customerRepository.getCustomersWithBelowCertainAverageRating(minimumAverageRating);
     }
 }
 
