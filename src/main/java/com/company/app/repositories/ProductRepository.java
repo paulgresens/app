@@ -1,55 +1,66 @@
 package com.company.app.repositories;
 
+import com.company.app.DTOs.ProductWithDetailDTO;
 import com.company.app.entities.Product;
+import com.company.app.DTOs.ProductRatingDTO;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 import org.springframework.data.repository.query.Param;
 import org.springframework.data.jpa.repository.Query;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface ProductRepository extends JpaRepository<Product, String> {
 
-    /*//Methode 1
-    @Query(value = "SELECT * FROM product WHERE product_number = :productNumber", nativeQuery = true)
-    Product getProducts(@Param("productNumber") String productNumber);
-    */
+    //Methode 1
+    @Query("SELECT new com.company.app.DTOs.ProductWithDetailDTO(p.productNumber, p.title, p.salesrank, p.image, "+
+            "CASE " +
+            "  WHEN EXISTS (SELECT 1 FROM Book  b WHERE b.productNumber = :productNumber) THEN 'Book' " +
+            "  WHEN EXISTS (SELECT 1 FROM Dvd d WHERE d.productNumber = :productNumber) THEN 'DVD' " +
+            "  WHEN EXISTS (SELECT 1 FROM Cd c WHERE c.productNumber = :productNumber) THEN 'CD' " +
+            "  ELSE 'Unknown' " +
+            "END)" +
+            "FROM Product p " +
+            "WHERE p.productNumber = :productNumber")
+    ProductWithDetailDTO getProducts(@Param("productNumber") String productNumber);
+
 
     // Methode 2
-    /*@Query(value = "SELECT p FROM Product p WHERE p.title LIKE :pattern", nativeQuery = true)
-    List<Product> getProductsByPattern(@Param("pattern") String pattern);
-    */
-
     List<Product> findByTitleContaining(String title);
 
     @Query("SELECT p FROM Product p")
     List<Product> getAllProducts();
 
-    /*// Methode 4
+    // Methode 4
     @Query(value = "WITH RECURSIVE CategoryPath AS (" +
-            "  SELECT c.id, c.super_category_id, c.name, ARRAY[c.name] as path" +
+            "  SELECT c.id, c.super_category, c.name, CAST(ARRAY[c.name] AS varchar[]) as path" +
             "  FROM Category c" +
-            "  WHERE c.name = :leafCategoryName" +
+            "  WHERE c.name = :rootCategoryName" +
             "  UNION ALL" +
-            "  SELECT c2.id, c2.super_category_id, c2.name, c2.name || cp.path" +
+            "  SELECT c2.id, c2.super_category, c2.name, array_cat(cp.path, ARRAY[c2.name])" +
             "  FROM Category c2" +
-            "  JOIN CategoryPath cp ON cp.super_category_id = c2.id" +
-            ")" +
+            "  JOIN CategoryPath cp ON cp.id = c2.super_category" +
+            ") " +
             "SELECT p.*" +
-            "FROM Product p" +
-            "JOIN ProductCategory pc ON pc.productNumber=p.productNumber" +
-            "JOIN Category c ON pc.id = c.id" +
-            "JOIN CategoryPath cp ON c.id = cp.id" +
-            "WHERE cp.path = :categoryPath",
+            "FROM Product p " +
+            "JOIN product_category pc ON pc.product_number=p.product_number " +
+            "JOIN CategoryPath cp ON pc.id = cp.id " +
+            "WHERE cp.path = :categoryPath ",
             nativeQuery = true)
     List<Product> findProductsByCategoryPath(
-            @Param("leafCategoryName") String leafCategoryName,
+            @Param("rootCategoryName") String leafCategoryName,
             @Param("categoryPath") String[] categoryPath);
+
+
     // Methode 5
-    @Query("SELECT p FROM Product p, ProdCondition pc, Rating r " +
-            "Where p.productNumber=pc.productNumber and pc.id=r.prodCondition  " +
-            "and r.prodCondition = (p.productNumber, :branchoffice, :condition) order by r.ratingOption DESC")
-    List<Product> findTopProducts(@Param("limit") int limit, @Param("branchoffice_id") int branchoffice_id, @Param("condition") String condition);*/
+    @Query("SELECT new com.company.app.DTOs.ProductRatingDTO(p.productNumber, p.title, p.salesrank, avg(r.ratingOption)) FROM Product p, ProdCondition pc, Rating r " +
+            "Where p.productNumber=pc.productNumber.productNumber " +
+            "and r.prodCondition.productNumber = pc.productNumber " +
+            "GROUP BY p.productNumber "+
+            "ORDER BY avg(r.ratingOption) DESC "+
+            "Limit :limit")
+    List<ProductRatingDTO> findTopProducts(@Param("limit") int limit);
 
 
     @Query(value = "WITH min_price AS (SELECT MIN (price) as lowest_price, product_number FROM prod_condition GROUP BY product_number)" +

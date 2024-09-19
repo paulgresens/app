@@ -9,19 +9,18 @@ import java.util.List;
 
 @Repository
 public interface CategoryRepository extends JpaRepository<Category, Integer> {
-    /*@Query(value = """
-            WITH RECURSIVE CategoryTree AS (
-                -- Select the root category based on the given name and ensure it's a root (super_category is null)
-                SELECT c.id, c.name, c.super_category
-                FROM category c
-                WHERE c.name = :categoryName AND c.super_category IS NULL
-                UNION ALL
-                -- Recursively find all subcategories of the selected root category
-                SELECT c.id, c.name, c.super_category
-                FROM category c
-                INNER JOIN CategoryTree ct ON c.super_category = ct.id
-            )
-            SELECT * FROM CategoryTree
-            """, nativeQuery = true)
-    List<Category> findCategoryTreeByName(@Param("categoryName") String categoryName);*/
+    @Query(
+            value="WITH RECURSIVE CategoryTree AS ( "+
+                    "SELECT c.id, c.name, c.super_category "+
+                    "FROM category c "+
+                    "WHERE c.name = :categoryName AND c.super_category IS NULL "+
+                    "UNION ALL " +
+                    "SELECT c.id, c.name, c.super_category "+
+                    "FROM category c "+
+                    "INNER JOIN CategoryTree ct ON c.super_category = ct.id " +
+                    ") " +
+                    "SELECT * FROM CategoryTree ", nativeQuery = true
+    )
+    List<Category> getCategoryTreeByName(@Param("categoryName") String categoryName);
 }
+
