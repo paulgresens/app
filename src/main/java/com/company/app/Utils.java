@@ -876,6 +876,7 @@ public class Utils {
             } else {
                 statement.setInt(2, supId);
             }
+
             statement.executeUpdate();
 
             // update catId to what has been generated in Category Insert
