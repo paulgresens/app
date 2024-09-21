@@ -53,8 +53,8 @@ public class QueryController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/products/{pattern}")
-    public ResponseEntity<Map<String, List<Product>>> getProducts( @PathVariable String pattern){
+    @GetMapping("/products")
+    public ResponseEntity<Map<String, List<Product>>> getProducts( @RequestParam(required = false) String pattern){
         List<Product> products=Collections.emptyList();
         if (pattern.equalsIgnoreCase("null")){
            products= productRepository.getAllProducts();
@@ -105,8 +105,8 @@ public class QueryController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/topProducts/{limit}")
-    public ResponseEntity<Map<String, List<ProductRatingDTO>>> getTopProducts(@PathVariable int limit){
+    @GetMapping("/topProducts")
+    public ResponseEntity<Map<String, List<ProductRatingDTO>>> getTopProducts(@RequestParam(required = false, defaultValue="10") int limit){
         if (limit < 1 ){
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
         }
