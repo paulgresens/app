@@ -117,10 +117,10 @@ public class QueryController {
 
     }
 
-    @GetMapping("/CategoryTree/{root}")
-    public ResponseEntity<Map<String, Map<String,Object>>> findCategoryTreeByName(@PathVariable String root){
+    @GetMapping("/CategoryTree")
+    public ResponseEntity<Map<String, Map<String,Object>>> findCategoryTreeByName(){
 
-        List<Category> categories = categoryRepository.getCategoryTreeByName(root);
+        List<Category> categories = categoryRepository.getAllCategories();
 
         if (categories.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Root category does not exist");
@@ -129,13 +129,13 @@ public class QueryController {
         Map<String, Object> result = new HashMap<>();
         List<Map<String, Object>> categoryList = new ArrayList<>();
 
-        Category rootCategory=null;
-        for (Category category : categories) {
-            if (category.getSuperCategory()==null){
-                 rootCategory=category;
-                 break;
-            }
-        }
+        Category rootCategory= new Category(null, "Root", null);
+//        for (Category category : categories) {
+//            if (category.getSuperCategory()==null){
+//                 rootCategory=category;
+//                 break;
+//            }
+//        }
 
         Map<String, Object> rootMap = buildCategoryMap(rootCategory, categories);
 
@@ -154,6 +154,7 @@ public class QueryController {
 
         // Create a map for the current category
         Map<String, Object> categoryMap = new HashMap<>();
+
         categoryMap.put("id", parentCategory.getId());
         categoryMap.put("name", parentCategory.getName());
 
@@ -161,9 +162,21 @@ public class QueryController {
         List<Map<String, Object>> childCategoryList = new ArrayList<>();
 
         for (Category category : allCategories) {
-            if (parentCategory.equals(category.getSuperCategory())) {
-                // Recursively build the map for child categories
-                childCategoryList.add(buildCategoryMap(category, allCategories));
+            if (parentCategory.getId()==null){
+                if (category.getSuperCategory()==null) {
+                    // Recursively build the map for child categories
+                    childCategoryList.add(buildCategoryMap(category, allCategories));
+                }
+            }
+            else{
+                if(category.getSuperCategory()!=null){
+                    if (parentCategory.getId() == category.getSuperCategory().getId()) {
+                        // Recursively build the map for child categories
+                        childCategoryList.add(buildCategoryMap(category, allCategories));
+                    }
+
+                }
+
             }
         }
 

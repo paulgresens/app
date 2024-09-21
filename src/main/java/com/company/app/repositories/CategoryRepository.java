@@ -1,6 +1,7 @@
 package com.company.app.repositories;
 
 import com.company.app.entities.Category;
+import com.company.app.entities.Product;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 import org.springframework.data.repository.query.Param;
@@ -22,4 +23,8 @@ public interface CategoryRepository extends JpaRepository<Category, Integer> {
                     "SELECT * FROM CategoryTree ", nativeQuery = true
     )
     List<Category> getCategoryTreeByName(@Param("categoryName") String categoryName);
+
+    @Query("SELECT c FROM Category c")
+    List<Category> getAllCategories();
 }
+
