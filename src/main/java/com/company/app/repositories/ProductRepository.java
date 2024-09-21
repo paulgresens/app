@@ -20,8 +20,14 @@ public interface ProductRepository extends JpaRepository<Product, String> {
             "  WHEN EXISTS (SELECT 1 FROM Dvd d WHERE d.productNumber = :productNumber) THEN 'DVD' " +
             "  WHEN EXISTS (SELECT 1 FROM Cd c WHERE c.productNumber = :productNumber) THEN 'CD' " +
             "  ELSE 'Unknown' " +
-            "END)" +
+            "END, " +
+            "b.numberPages, b.publishedAt, d.format, d.regionCode, d.runtime, c.publishedAt, bp.name.name, cl.name.name) " +  // Assuming these fields exist in the Book entity
             "FROM Product p " +
+            "LEFT JOIN Book b ON b.productNumber = p.productNumber " +
+            "LEFT JOIN BookPublisher bp ON bp.productNumber.productNumber = b.productNumber " +
+            "LEFT JOIN Dvd d ON d.productNumber = p.productNumber " +
+            "LEFT JOIN Cd c ON c.productNumber = p.productNumber " +
+            "LEFT JOIN CdLabel cl ON cl.productNumber.productNumber = c.productNumber " +
             "WHERE p.productNumber = :productNumber")
     ProductWithDetailDTO getProducts(@Param("productNumber") String productNumber);
 
