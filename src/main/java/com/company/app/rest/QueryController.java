@@ -54,7 +54,7 @@ public class QueryController {
     }
 
     @GetMapping("/products/{pattern}")
-    public List<Product> getProducts( @PathVariable String pattern){
+    public ResponseEntity<Map<String, List<Product>>> getProducts( @PathVariable String pattern){
         List<Product> products=Collections.emptyList();
         if (pattern.equalsIgnoreCase("null")){
            products= productRepository.getAllProducts();
@@ -64,7 +64,9 @@ public class QueryController {
         if (products.isEmpty()){
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No such products exist");
         }
-        return products;
+        Map<String, List<Product>> response = Map.of("products", products);
+
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/belowRating/{minimumAverageRating}")
@@ -76,17 +78,19 @@ public class QueryController {
     }
 
     @GetMapping("/product/{product_number}")
-    public ProductWithDetailDTO getProduct(@PathVariable String product_number){
+    public ResponseEntity<Map<String, ProductWithDetailDTO>> getProduct(@PathVariable String product_number){
         ProductWithDetailDTO product= productRepository.getProducts(product_number);
         if (product==null){
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Product does not exist");
         }
-        return product;
 
+        Map<String, ProductWithDetailDTO> response = Map.of("product", product);
+
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/products/byPath/**")
-    public List<Product> getProductsByCategoryPath(HttpServletRequest request){
+    public ResponseEntity<Map<String, List<Product>>> getProductsByCategoryPath(HttpServletRequest request){
         List<String> path_list =extractAndSplitPath(request);
         String rootCategory = path_list.get(0);
         String[] path = path_list.toArray(new String[0]);
@@ -95,20 +99,26 @@ public class QueryController {
         if (products.isEmpty()){
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No such products exist");
         }
-        return products;
+
+        Map<String, List<Product>> response = Map.of("products", products);
+
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/topProducts/{limit}")
-    public List<ProductRatingDTO> getTopProducts(@PathVariable int limit){
+    public ResponseEntity<Map<String, List<ProductRatingDTO>>> getTopProducts(@PathVariable int limit){
         if (limit < 1 ){
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
         }
-        return productRepository.findTopProducts(limit);
+        List<ProductRatingDTO> products= productRepository.findTopProducts(limit);
+        Map<String, List<ProductRatingDTO>> response = Map.of("products", products);
+
+        return ResponseEntity.ok(response);
 
     }
 
     @GetMapping("/CategoryTree/{root}")
-    public Map<String, Object> findCategoryTreeByName(@PathVariable String root){
+    public ResponseEntity<Map<String, Map<String,Object>>> findCategoryTreeByName(@PathVariable String root){
 
         List<Category> categories = categoryRepository.getCategoryTreeByName(root);
 
@@ -130,9 +140,11 @@ public class QueryController {
         Map<String, Object> rootMap = buildCategoryMap(rootCategory, categories);
 
         categoryList.add(rootMap);
-        result.put("categories", categoryList);
+        result.put("Root category", categoryList);
+        Map<String, Map<String,Object>> response = Map.of("Category Tree", result);
 
-        return result;
+        return ResponseEntity.ok(response);
+
     }
 
     /**
