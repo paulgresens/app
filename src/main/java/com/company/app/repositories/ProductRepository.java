@@ -20,14 +20,23 @@ public interface ProductRepository extends JpaRepository<Product, String> {
             "  WHEN EXISTS (SELECT 1 FROM Cd c WHERE c.productNumber = :productNumber) THEN 'CD' " +
             "  ELSE 'Unknown' " +
             "END, " +
-            "b.numberPages, b.publishedAt, d.format, d.regionCode, d.runtime, c.publishedAt, bp.name.name, cl.name.name) " +  // Assuming these fields exist in the Book entity
+            "b.numberPages, b.publishedAt, d.format, d.regionCode, d.runtime, c.publishedAt, " +
+            "CAST(STRING_AGG(bp.name.name, ',') as string ), " +  // Aggregate publisher names
+            "CAST(STRING_AGG(cl.name.name, ',') as string )," +
+            "(SELECT CAST(STRING_AGG(pp.name, ',')as string ) FROM PersonProduct pp WHERE pp.productNumber.productNumber = p.productNumber AND pp.role = 'author') , " +
+            "(SELECT CAST(STRING_AGG(pp.name, ',') as string) FROM PersonProduct pp WHERE pp.productNumber.productNumber = p.productNumber AND pp.role = 'artist') , " +
+            "(SELECT CAST(STRING_AGG(pp.name, ',') as string) FROM PersonProduct pp WHERE pp.productNumber.productNumber = p.productNumber AND pp.role = 'actor'), "+
+            "(SELECT CAST(STRING_AGG(pp.name, ',') as string) FROM PersonProduct pp WHERE pp.productNumber.productNumber = p.productNumber AND pp.role = 'creator'), "+
+            "(SELECT CAST(STRING_AGG(pp.name, ',') as string) FROM PersonProduct pp WHERE pp.productNumber.productNumber = p.productNumber AND pp.role = 'director') "+
+            ") " +      // Aggregate label names
             "FROM Product p " +
             "LEFT JOIN Book b ON b.productNumber = p.productNumber " +
             "LEFT JOIN BookPublisher bp ON bp.productNumber.productNumber = b.productNumber " +
             "LEFT JOIN Dvd d ON d.productNumber = p.productNumber " +
             "LEFT JOIN Cd c ON c.productNumber = p.productNumber " +
             "LEFT JOIN CdLabel cl ON cl.productNumber.productNumber = c.productNumber " +
-            "WHERE p.productNumber = :productNumber")
+            "WHERE p.productNumber = :productNumber "+
+            "GROUP BY p.productNumber, b.numberPages, b.publishedAt, d.format, d.regionCode, d.runtime, c.publishedAt")
     ProductWithDetailDTO getProducts(@Param("productNumber") String productNumber);
 
 
