@@ -22,12 +22,8 @@ import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
-import java.io.UnsupportedEncodingException;
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 import java.util.Map;
 import java.util.Optional;
 
@@ -95,10 +91,10 @@ public class QueryController {
         String rootCategory = path_list.get(0);
         String[] path = path_list.toArray(new String[0]);
 
-        List<Product> products= productRepository.findProductsByCategoryPath(rootCategory, path);
-        if (products.isEmpty()){
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No such products exist");
+        if (productRepository.checkIfCategoryPathExists(rootCategory, path)==0){
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No such Path exists");
         }
+        List<Product> products= productRepository.findProductsByCategoryPath(rootCategory, path);
 
         Map<String, List<Product>> response = Map.of("products", products);
 
@@ -209,6 +205,7 @@ public class QueryController {
                 .filter(segment -> !segment.isEmpty())
                 .collect(Collectors.toList());
     }
+
     @GetMapping("/{productNumber}/offers")
     public ResponseEntity<Map<String, List<ProdConditionDTO>>> getProductOffers(@PathVariable String productNumber){
         Optional<Product> product = productRepository.findById(productNumber);
@@ -219,7 +216,6 @@ public class QueryController {
         Map<String, List<ProdConditionDTO>> response = Map.of("offers", offers);
         return ResponseEntity.ok(response);
     }
-
 
 }
 

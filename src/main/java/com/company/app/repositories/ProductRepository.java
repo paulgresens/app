@@ -8,7 +8,6 @@ import org.springframework.stereotype.Repository;
 import org.springframework.data.repository.query.Param;
 import org.springframework.data.jpa.repository.Query;
 import java.util.List;
-import java.util.Optional;
 
 @Repository
 public interface ProductRepository extends JpaRepository<Product, String> {
@@ -38,6 +37,23 @@ public interface ProductRepository extends JpaRepository<Product, String> {
     @Query("SELECT p FROM Product p")
     List<Product> getAllProducts();
 
+    @Query(value = "WITH RECURSIVE CategoryPath AS (" +
+            "  SELECT c.id, c.super_category, c.name, CAST(ARRAY[c.name] AS varchar[]) as path" +
+            "  FROM Category c" +
+            "  WHERE c.name = :rootCategoryName" +
+            "  UNION ALL" +
+            "  SELECT c2.id, c2.super_category, c2.name, array_cat(cp.path, ARRAY[c2.name])" +
+            "  FROM Category c2" +
+            "  JOIN CategoryPath cp ON cp.id = c2.super_category" +
+            ") " +
+            "SELECT count(cp.*)" +
+            "FROM CategoryPath cp " +
+            "WHERE cp.path = :categoryPath",
+            nativeQuery = true)
+    Integer checkIfCategoryPathExists(
+            @Param("rootCategoryName") String rootCategoryName,
+            @Param("categoryPath") String[] categoryPath);
+
     // Methode 4
     @Query(value = "WITH RECURSIVE CategoryPath AS (" +
             "  SELECT c.id, c.super_category, c.name, CAST(ARRAY[c.name] AS varchar[]) as path" +
@@ -55,7 +71,7 @@ public interface ProductRepository extends JpaRepository<Product, String> {
             "WHERE cp.path = :categoryPath ",
             nativeQuery = true)
     List<Product> findProductsByCategoryPath(
-            @Param("rootCategoryName") String leafCategoryName,
+            @Param("rootCategoryName") String rootCategoryName,
             @Param("categoryPath") String[] categoryPath);
 
 
