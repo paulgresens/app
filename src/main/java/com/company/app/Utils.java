@@ -685,7 +685,7 @@ public class Utils {
                         // adjust extraction according to source
                         String person = null;
                         if (source.toLowerCase().equals("leipzig")) {
-                            person = getAttributeValue(personsElement, role, "name", i);
+                            person = getAttributeValue(personsElement, role, "name", j);
                         } else if (source.toLowerCase().equals("dresden")) {
                             person = personList.item(j).getTextContent();
                         }

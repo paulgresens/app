@@ -138,10 +138,19 @@ public class Insert {
             Utils.insertBookPublisher(rootElement, "dresden");
 
             Utils.insertPerson(rootElement, "cd", "artist", "dresden");
+            Utils.insertProductPerson(rootElement, "cd", "artist", "dresden");
+
             Utils.insertPerson(rootElement, "book", "author", "dresden");
+            Utils.insertProductPerson(rootElement, "book", "author", "dresden");
+
             Utils.insertPerson(rootElement, "dvd", "creator", "dresden");
+            Utils.insertProductPerson(rootElement, "dvd", "creator", "dresden");
+
             Utils.insertPerson(rootElement, "dvd", "director", "dresden");
+            Utils.insertProductPerson(rootElement, "dvd", "director", "dresden");
+
             Utils.insertPerson(rootElement, "dvd", "actor", "dresden");
+            Utils.insertProductPerson(rootElement, "dvd", "actor", "dresden");
 
             Utils.insertSimilars(rootElement, "dresden");
             Utils.insertConditions(rootElement);
