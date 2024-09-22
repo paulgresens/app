@@ -49,19 +49,15 @@ public class QueryController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/products")
+    @GetMapping("/product")
     public ResponseEntity<Map<String, List<Product>>> getProducts( @RequestParam(required = false) String pattern){
         List<Product> products=Collections.emptyList();
-        if (pattern==null){
+        if (pattern == null ){
            products= productRepository.getAllProducts();
         } else {
             products= productRepository.findByTitleContaining(pattern);
         }
-        if (products.isEmpty()){
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No such products exist");
-        }
         Map<String, List<Product>> response = Map.of("products", products);
-
         return ResponseEntity.ok(response);
     }
 
