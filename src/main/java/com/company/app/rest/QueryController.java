@@ -97,7 +97,7 @@ public class QueryController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/topProducts")
+    @GetMapping("/product/top")
     public ResponseEntity<Map<String, List<ProductRatingDTO>>> getTopProducts(@RequestParam(required = false, defaultValue="10") int limit){
         if (limit < 1 ){
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
@@ -109,7 +109,7 @@ public class QueryController {
 
     }
 
-    @GetMapping("/CategoryTree")
+    @GetMapping("/categorytree")
     public ResponseEntity<Map<String, Map<String,Object>>> findCategoryTreeByName(){
 
         List<Category> categories = categoryRepository.getAllCategories();
@@ -183,7 +183,7 @@ public class QueryController {
     private List<String> extractAndSplitPath(HttpServletRequest request) {
         String requestURI = request.getRequestURI();
         String basePath = "/product/path/";
-        String path = requestURI.substring(requestURI.indexOf(basePath) + basePath.length()+1);
+        String path = requestURI.substring(requestURI.indexOf(basePath) + basePath.length());
 
         // URL decode the path to handle encoded characters
         String decodedPath;
