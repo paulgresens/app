@@ -81,7 +81,7 @@ public class QueryController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/products/byPath/**")
+    @GetMapping("/product/path/**")
     public ResponseEntity<Map<String, List<Product>>> getProductsByCategoryPath(HttpServletRequest request){
         List<String> path_list =extractAndSplitPath(request);
         String rootCategory = path_list.get(0);
@@ -182,7 +182,7 @@ public class QueryController {
     // Utility method to extract path and split into segments
     private List<String> extractAndSplitPath(HttpServletRequest request) {
         String requestURI = request.getRequestURI();
-        String basePath = "/product/byPath/";
+        String basePath = "/product/path/";
         String path = requestURI.substring(requestURI.indexOf(basePath) + basePath.length()+1);
 
         // URL decode the path to handle encoded characters
