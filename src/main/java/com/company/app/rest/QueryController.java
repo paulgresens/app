@@ -56,7 +56,7 @@ public class QueryController {
     @GetMapping("/products")
     public ResponseEntity<Map<String, List<Product>>> getProducts( @RequestParam(required = false) String pattern){
         List<Product> products=Collections.emptyList();
-        if (pattern.equalsIgnoreCase("null")){
+        if (pattern==null){
            products= productRepository.getAllProducts();
         } else {
             products= productRepository.findByTitleContaining(pattern);
