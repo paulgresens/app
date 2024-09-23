@@ -21,6 +21,7 @@ import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Optional;
 
@@ -61,7 +62,8 @@ public class InsertController {
         if(rating.isPresent()){
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Customer Already rated this");
         }
-        if (addReviewRequestBody.rating < 1 || addReviewRequestBody.rating > 5 ){
+        Integer[] allowedValues = {1, 2, 3, 4, 5};
+        if (!Arrays.asList(allowedValues).contains(addReviewRequestBody.rating)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
         }
         try{
