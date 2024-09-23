@@ -62,11 +62,14 @@ public class QueryController {
     }
 
     @GetMapping("/belowRating/{minimumAverageRating}")
-    public List<Customer> getTrolls(@PathVariable Float minimumAverageRating){
+    public ResponseEntity<Map<String, List<Customer>>> getTrolls(@PathVariable Float minimumAverageRating){
         if (minimumAverageRating < 0 || minimumAverageRating > 5){
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
         }
-        return customerRepository.getCustomersWithBelowCertainAverageRating(minimumAverageRating);
+        List<Customer> trollingCustomers = customerRepository.getCustomersWithBelowCertainAverageRating(minimumAverageRating);
+        Map<String, List<Customer>> response = Map.of("customers", trollingCustomers);
+        return ResponseEntity.ok(response);
+
     }
 
     @GetMapping("/product/{product_number}")
